@@ -18,8 +18,9 @@ interface AvatarOption {
 }
 
 const AvatarSelection = () => {
+  console.log('AvatarSelection component rendering');
+  
   const { user, profile } = useAuthStore();
-  const { toast } = useToast();
   const navigate = useNavigate();
   const [avatars, setAvatars] = useState<AvatarOption[]>([]);
   const [unlockedAvatars, setUnlockedAvatars] = useState<Set<string>>(new Set());
@@ -28,6 +29,8 @@ const AvatarSelection = () => {
   const [userPoints, setUserPoints] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  console.log('Component state:', { user: !!user, profile: !!profile, isLoading });
 
   useEffect(() => {
     if (user) {
@@ -187,18 +190,18 @@ const AvatarSelection = () => {
                 <span className="text-sm font-medium">Your Points</span>
                 <span className="text-lg font-bold text-primary">{userPoints}</span>
               </div>
-              <Button 
+              <button 
                 type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleSaveAvatar(e);
+                onClick={() => {
+                  console.log('Raw button clicked');
+                  alert('Raw button test');
                 }}
                 disabled={isSaving || tempSelectedAvatar === selectedAvatar}
-                className="w-full bg-gradient-to-r from-primary to-accent"
+                className="w-full bg-gradient-to-r from-primary to-accent px-4 py-2 rounded text-white"
               >
                 <Check className="w-4 h-4 mr-2" />
                 {isSaving ? 'Saving...' : 'Save Avatar'}
-              </Button>
+              </button>
             </div>
           </div>
 
