@@ -110,13 +110,10 @@ const AvatarSelection = () => {
 
   const handleSaveAvatar = async (e?: React.MouseEvent) => {
     e?.preventDefault();
+    e?.stopPropagation();
     
     if (!tempSelectedAvatar) {
-      toast({
-        variant: 'destructive',
-        title: 'No avatar selected',
-        description: 'Please select an avatar first.'
-      });
+      alert('Please select an avatar first.');
       return;
     }
 
@@ -133,21 +130,11 @@ const AvatarSelection = () => {
       }
 
       setSelectedAvatar(tempSelectedAvatar);
-
-      toast({
-        title: 'Avatar saved!',
-        description: 'Your profile avatar has been updated.'
-      });
-
-      // Just show success message, don't navigate
-      // User can manually go back using the back button
+      alert('Avatar saved successfully!');
+      
     } catch (error: any) {
       console.error('Error saving avatar:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error?.message || 'Failed to save avatar. Please try again.'
-      });
+      alert('Failed to save avatar: ' + (error?.message || 'Unknown error'));
     } finally {
       setIsSaving(false);
     }
