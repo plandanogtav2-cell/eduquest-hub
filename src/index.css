@@ -1,0 +1,362 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Alabang Elementary School Educational Game Design System
+   Purple/Indigo modern theme with glassmorphism and playful elements */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@layer base {
+  :root {
+    /* Core Colors - Purple/Indigo Theme */
+    --background: 250 100% 98%;
+    --foreground: 250 40% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 250 40% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 250 40% 15%;
+
+    /* Primary - Deep Indigo */
+    --primary: 250 84% 54%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Soft Lavender */
+    --secondary: 250 60% 95%;
+    --secondary-foreground: 250 40% 25%;
+
+    /* Muted - Light Purple */
+    --muted: 250 30% 94%;
+    --muted-foreground: 250 20% 45%;
+
+    /* Accent - Vibrant Violet */
+    --accent: 280 85% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive - Warm Red */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Success - Fresh Green */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning - Sunny Orange */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Info - Sky Blue */
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    /* Subject Colors */
+    --math: 250 84% 54%;
+    --math-light: 250 84% 95%;
+    --science: 142 76% 36%;
+    --science-light: 142 76% 95%;
+    --logic: 280 85% 60%;
+    --logic-light: 280 85% 95%;
+
+    /* Grade Colors */
+    --grade-4: 199 89% 48%;
+    --grade-5: 38 92% 50%;
+    --grade-6: 250 84% 54%;
+
+    /* UI Elements */
+    --border: 250 30% 90%;
+    --input: 250 30% 90%;
+    --ring: 250 84% 54%;
+
+    --radius: 1rem;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(250 84% 54%) 0%, hsl(280 85% 60%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(160 84% 39%) 100%);
+    --gradient-warning: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(25 95% 53%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(250 84% 54%) 0%, hsl(280 85% 60%) 50%, hsl(320 85% 55%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(250 60% 98%) 100%);
+
+    /* Glassmorphism */
+    --glass-bg: hsla(0, 0%, 100%, 0.7);
+    --glass-border: hsla(250, 30%, 90%, 0.5);
+    --glass-shadow: 0 8px 32px 0 hsla(250, 84%, 54%, 0.1);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsla(250, 84%, 54%, 0.05);
+    --shadow-md: 0 4px 6px -1px hsla(250, 84%, 54%, 0.1), 0 2px 4px -2px hsla(250, 84%, 54%, 0.1);
+    --shadow-lg: 0 10px 15px -3px hsla(250, 84%, 54%, 0.1), 0 4px 6px -4px hsla(250, 84%, 54%, 0.1);
+    --shadow-xl: 0 20px 25px -5px hsla(250, 84%, 54%, 0.1), 0 8px 10px -6px hsla(250, 84%, 54%, 0.1);
+    --shadow-glow: 0 0 40px hsla(250, 84%, 54%, 0.3);
+
+    /* Sidebar */
+    --sidebar-background: 250 100% 98%;
+    --sidebar-foreground: 250 40% 25%;
+    --sidebar-primary: 250 84% 54%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 250 60% 95%;
+    --sidebar-accent-foreground: 250 40% 25%;
+    --sidebar-border: 250 30% 90%;
+    --sidebar-ring: 250 84% 54%;
+  }
+
+  .dark {
+    --background: 250 40% 8%;
+    --foreground: 250 20% 95%;
+
+    --card: 250 35% 12%;
+    --card-foreground: 250 20% 95%;
+
+    --popover: 250 35% 12%;
+    --popover-foreground: 250 20% 95%;
+
+    --primary: 250 84% 65%;
+    --primary-foreground: 250 40% 8%;
+
+    --secondary: 250 30% 18%;
+    --secondary-foreground: 250 20% 90%;
+
+    --muted: 250 30% 18%;
+    --muted-foreground: 250 20% 65%;
+
+    --accent: 280 75% 65%;
+    --accent-foreground: 250 40% 8%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 85% 55%;
+    --warning-foreground: 250 40% 8%;
+
+    --info: 199 80% 55%;
+    --info-foreground: 250 40% 8%;
+
+    --border: 250 30% 20%;
+    --input: 250 30% 20%;
+    --ring: 250 84% 65%;
+
+    --glass-bg: hsla(250, 35%, 12%, 0.8);
+    --glass-border: hsla(250, 30%, 25%, 0.5);
+    --glass-shadow: 0 8px 32px 0 hsla(0, 0%, 0%, 0.3);
+
+    --sidebar-background: 250 40% 8%;
+    --sidebar-foreground: 250 20% 95%;
+    --sidebar-primary: 250 84% 65%;
+    --sidebar-primary-foreground: 250 40% 8%;
+    --sidebar-accent: 250 30% 18%;
+    --sidebar-accent-foreground: 250 20% 90%;
+    --sidebar-border: 250 30% 20%;
+    --sidebar-ring: 250 84% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight;
+  }
+}
+
+@layer components {
+  /* Glassmorphism Card */
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+
+  /* Subject Cards */
+  .subject-math {
+    @apply bg-primary/10 border-primary/20 text-primary;
+  }
+
+  .subject-science {
+    @apply bg-success/10 border-success/20 text-success;
+  }
+
+  .subject-logic {
+    @apply bg-accent/10 border-accent/20 text-accent;
+  }
+
+  /* Grade Badges */
+  .grade-badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+  }
+
+  .grade-4 {
+    @apply bg-info/10 text-info border border-info/20;
+  }
+
+  .grade-5 {
+    @apply bg-warning/10 text-warning border border-warning/20;
+  }
+
+  .grade-6 {
+    @apply bg-primary/10 text-primary border border-primary/20;
+  }
+
+  /* Hero Gradient Text */
+  .gradient-text {
+    background: var(--gradient-hero);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Floating Animation */
+  .float-animation {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+
+  /* Pulse Glow */
+  .pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% {
+      box-shadow: 0 0 20px hsla(250, 84%, 54%, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 40px hsla(250, 84%, 54%, 0.5);
+    }
+  }
+
+  /* Shimmer Effect */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      hsla(0, 0%, 100%, 0.3) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  /* Quiz Option Hover */
+  .quiz-option {
+    @apply relative overflow-hidden transition-all duration-300;
+  }
+
+  .quiz-option::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsla(250, 84%, 54%, 0.1),
+      transparent
+    );
+    transition: left 0.5s;
+  }
+
+  .quiz-option:hover::before {
+    left: 100%;
+  }
+
+  /* Progress Bar */
+  .progress-bar {
+    @apply h-3 bg-secondary rounded-full overflow-hidden;
+  }
+
+  .progress-bar-fill {
+    @apply h-full rounded-full transition-all duration-500 ease-out;
+    background: var(--gradient-primary);
+  }
+
+  /* Achievement Badge */
+  .achievement-badge {
+    @apply relative inline-flex items-center justify-center;
+  }
+
+  .achievement-badge::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: var(--gradient-primary);
+    z-index: -1;
+    opacity: 0.3;
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
+  /* Confetti burst animation for correct answers */
+  .confetti-burst {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 100;
+  }
+}
+
+@layer utilities {
+  /* Custom scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: hsl(var(--secondary));
+    border-radius: 4px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary));
+    border-radius: 4px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--accent));
+  }
+
+  /* Text balance for headings */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Safe area padding for mobile */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
