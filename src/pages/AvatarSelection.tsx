@@ -193,14 +193,11 @@ const AvatarSelection = () => {
               <button 
                 type="button"
                 onClick={() => {
-                  console.log('Raw button clicked');
-                  alert('Raw button test');
+                  alert('Button clicked!');
                 }}
-                disabled={isSaving || tempSelectedAvatar === selectedAvatar}
-                className="w-full bg-gradient-to-r from-primary to-accent px-4 py-2 rounded text-white"
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
               >
-                <Check className="w-4 h-4 mr-2" />
-                {isSaving ? 'Saving...' : 'Save Avatar'}
+                Save Avatar
               </button>
             </div>
           </div>
