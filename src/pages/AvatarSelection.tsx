@@ -108,7 +108,9 @@ const AvatarSelection = () => {
     }
   };
 
-  const handleSaveAvatar = async () => {
+  const handleSaveAvatar = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    
     if (!tempSelectedAvatar) {
       toast({
         variant: 'destructive',
@@ -137,10 +139,8 @@ const AvatarSelection = () => {
         description: 'Your profile avatar has been updated.'
       });
 
-      // Navigate back to profile after a short delay
-      setTimeout(() => {
-        navigate('/profile', { replace: true });
-      }, 1000);
+      // Just show success message, don't navigate
+      // User can manually go back using the back button
     } catch (error: any) {
       console.error('Error saving avatar:', error);
       toast({
@@ -212,7 +212,11 @@ const AvatarSelection = () => {
                 <span className="text-lg font-bold text-primary">{userPoints}</span>
               </div>
               <Button 
-                onClick={handleSaveAvatar} 
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleSaveAvatar(e);
+                }}
                 disabled={isSaving || tempSelectedAvatar === selectedAvatar}
                 className="w-full bg-gradient-to-r from-primary to-accent"
               >
