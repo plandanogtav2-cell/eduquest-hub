@@ -137,10 +137,9 @@ const AvatarSelection = () => {
         description: 'Your profile avatar has been updated.'
       });
 
-      // Navigate back to profile after 1 second and force reload
+      // Navigate back to profile after a short delay
       setTimeout(() => {
         navigate('/profile', { replace: true });
-        window.location.reload();
       }, 1000);
     } catch (error: any) {
       console.error('Error saving avatar:', error);

@@ -77,6 +77,18 @@ const Profile = () => {
     }
   }, [user, profile?.selected_avatar_id]);
 
+  // Refresh data when component mounts or when coming back from avatar selection
+  useEffect(() => {
+    const handleFocus = () => {
+      if (user && profile) {
+        fetchProfileData();
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [user, profile]);
+
   const fetchProfileData = async () => {
     try {
       // Fetch avatar
