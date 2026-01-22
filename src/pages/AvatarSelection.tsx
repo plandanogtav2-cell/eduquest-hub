@@ -112,32 +112,21 @@ const AvatarSelection = () => {
     e?.preventDefault();
     e?.stopPropagation();
     
+    console.log('Save button clicked');
+    
     if (!tempSelectedAvatar) {
-      alert('Please select an avatar first.');
+      console.log('No avatar selected');
       return;
     }
 
+    console.log('Starting save process...');
     setIsSaving(true);
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ selected_avatar_id: tempSelectedAvatar })
-        .eq('user_id', user?.id);
-
-      if (error) {
-        console.error('Update error:', error);
-        throw error;
-      }
-
-      setSelectedAvatar(tempSelectedAvatar);
-      alert('Avatar saved successfully!');
-      
-    } catch (error: any) {
-      console.error('Error saving avatar:', error);
-      alert('Failed to save avatar: ' + (error?.message || 'Unknown error'));
-    } finally {
-      setIsSaving(false);
-    }
+    
+    // Just log success without any database operations
+    console.log('Avatar would be saved:', tempSelectedAvatar);
+    alert('Test: Avatar save clicked (no DB operation)');
+    
+    setIsSaving(false);
   };
 
   if (isLoading) {
