@@ -7,12 +7,5 @@
   ],
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": "vite",
-  "functions": {},
-  "routes": [
-    {
-      "src": "/.*",
-      "dest": "/index.html"
-    }
-  ]
+  "framework": "vite"
 }
