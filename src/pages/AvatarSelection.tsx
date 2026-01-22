@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
+import useSoundEffects from '@/hooks/useSoundEffects';
 
 interface AvatarOption {
   id: string;
@@ -18,9 +19,8 @@ interface AvatarOption {
 }
 
 const AvatarSelection = () => {
-  console.log('AvatarSelection component rendering');
-  
   const { user, profile } = useAuthStore();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [avatars, setAvatars] = useState<AvatarOption[]>([]);
   const [unlockedAvatars, setUnlockedAvatars] = useState<Set<string>>(new Set());
@@ -29,8 +29,6 @@ const AvatarSelection = () => {
   const [userPoints, setUserPoints] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-
-  console.log('Component state:', { user: !!user, profile: !!profile, isLoading });
 
   useEffect(() => {
     if (user) {
@@ -111,25 +109,49 @@ const AvatarSelection = () => {
     }
   };
 
-  const handleSaveAvatar = async (e?: React.MouseEvent) => {
-    e?.preventDefault();
-    e?.stopPropagation();
-    
-    console.log('Save button clicked');
-    
+  const handleSaveAvatar = async () => {
     if (!tempSelectedAvatar) {
-      console.log('No avatar selected');
+      toast({
+        variant: 'destructive',
+        title: 'No avatar selected',
+        description: 'Please select an avatar first.'
+      });
       return;
     }
 
-    console.log('Starting save process...');
     setIsSaving(true);
-    
-    // Just log success without any database operations
-    console.log('Avatar would be saved:', tempSelectedAvatar);
-    alert('Test: Avatar save clicked (no DB operation)');
-    
-    setIsSaving(false);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ selected_avatar_id: tempSelectedAvatar })
+        .eq('user_id', user?.id);
+
+      if (error) {
+        console.error('Update error:', error);
+        throw error;
+      }
+
+      setSelectedAvatar(tempSelectedAvatar);
+
+      // Update the auth store profile to reflect the change immediately
+      const { updateProfile } = useAuthStore.getState();
+      await updateProfile({ selected_avatar_id: tempSelectedAvatar });
+
+      toast({
+        title: 'Avatar saved!',
+        description: 'Your profile avatar has been updated.'
+      });
+
+    } catch (error: any) {
+      console.error('Error saving avatar:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error?.message || 'Failed to save avatar. Please try again.'
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (isLoading) {
@@ -143,6 +165,7 @@ const AvatarSelection = () => {
   }
 
   const currentAvatar = avatars.find(a => a.id === selectedAvatar);
+  const previewAvatar = avatars.find(a => a.id === tempSelectedAvatar) || currentAvatar;
 
   return (
     <DashboardLayout>
@@ -172,11 +195,11 @@ const AvatarSelection = () => {
             <div className="glass-card rounded-2xl p-6 sticky top-4">
               <h3 className="font-bold mb-4 flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-primary" />
-                Current Avatar
+                {tempSelectedAvatar !== selectedAvatar ? 'Preview Avatar' : 'Current Avatar'}
               </h3>
-              {currentAvatar ? (
-                <div className={`aspect-square bg-gradient-to-br ${currentAvatar.color_scheme} rounded-2xl flex items-center justify-center mb-4`}>
-                  <div className="text-8xl">{currentAvatar.emoji}</div>
+              {previewAvatar ? (
+                <div className={`aspect-square bg-gradient-to-br ${previewAvatar.color_scheme} rounded-2xl flex items-center justify-center mb-4`}>
+                  <div className="text-8xl">{previewAvatar.emoji}</div>
                 </div>
               ) : (
                 <div className="aspect-square bg-gradient-to-br from-gray-400 to-gray-600 rounded-2xl flex items-center justify-center mb-4">
@@ -184,21 +207,20 @@ const AvatarSelection = () => {
                 </div>
               )}
               <p className="text-center font-medium mb-4">
-                {currentAvatar?.name || 'No avatar selected'}
+                {previewAvatar?.name || 'No avatar selected'}
               </p>
               <div className="flex items-center justify-between p-3 bg-muted rounded-lg mb-4">
                 <span className="text-sm font-medium">Your Points</span>
                 <span className="text-lg font-bold text-primary">{userPoints}</span>
               </div>
-              <button 
-                type="button"
-                onClick={() => {
-                  alert('Button clicked!');
-                }}
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+              <Button 
+                onClick={handleSaveAvatar} 
+                disabled={isSaving || tempSelectedAvatar === selectedAvatar}
+                className="w-full bg-gradient-to-r from-primary to-accent"
               >
-                Save Avatar
-              </button>
+                <Check className="w-4 h-4 mr-2" />
+                {isSaving ? 'Saving...' : 'Save Avatar'}
+              </Button>
             </div>
           </div>
 
