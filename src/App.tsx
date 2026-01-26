@@ -8,7 +8,10 @@ import { useAuthStore } from "@/stores/authStore";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
-import Quiz from "./pages/Quiz";
+import PatternRecognition from "./pages/PatternRecognition";
+import Sequencing from "./pages/Sequencing";
+import DeductiveReasoning from "./pages/DeductiveReasoning";
+import GameSelection from "./pages/GameSelection";
 import Syllabus from "./pages/Syllabus";
 import Settings from "./pages/Settings";
 import TermsAndConditions from "./pages/TermsAndConditions";
@@ -42,7 +45,10 @@ const AppContent = () => {
       <Route path="/" element={<Auth />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/quiz/:quizId" element={<Quiz />} />
+      <Route path="/game/:gameType/select" element={<GameSelection />} />
+      <Route path="/game/pattern-recognition/play" element={<PatternRecognition />} />
+      <Route path="/game/sequencing/play" element={<Sequencing />} />
+      <Route path="/game/deductive-reasoning/play" element={<DeductiveReasoning />} />
       <Route path="/syllabus" element={<Syllabus />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/terms" element={<TermsAndConditions />} />

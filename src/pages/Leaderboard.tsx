@@ -12,7 +12,7 @@ interface LeaderboardEntry {
   user_id: string;
   full_name: string;
   total_points: number;
-  total_quizzes: number;
+  total_games: number;
   average_score: number;
   rank_position: number;
   avatar_emoji?: string;
@@ -75,7 +75,7 @@ const Leaderboard = () => {
             user_id: currentUserProfile[0].user_id,
             full_name: currentUserProfile[0].full_name,
             total_points: 0,
-            total_quizzes: 0,
+            total_games: 0,
             average_score: 0,
             rank_position: 1
           }]);
@@ -83,7 +83,7 @@ const Leaderboard = () => {
             user_id: currentUserProfile[0].user_id,
             full_name: currentUserProfile[0].full_name,
             total_points: 0,
-            total_quizzes: 0,
+            total_games: 0,
             average_score: 0,
             rank_position: 1
           });
@@ -98,49 +98,45 @@ const Leaderboard = () => {
       console.log('Profiles for grade', selectedGrade, ':', profiles);
 
       if (!profiles || profiles.length === 0) {
+        console.log('No profiles found for grade', selectedGrade);
         setLeaderboard([]);
         setUserRank(null);
+        setIsLoading(false);
         return;
       }
 
-      // Get completed quiz attempts
-      const { data: attempts, error: attemptsError } = await supabase
-        .from('quiz_attempts')
-        .select('user_id, score, quiz_id')
-        .not('completed_at', 'is', null);
+      // Get completed game sessions instead of quiz attempts
+      const { data: sessions, error: sessionsError } = await supabase
+        .from('game_sessions')
+        .select('user_id, score, game_type, difficulty, level_reached')
+        .gte('level_reached', 1); // Only count sessions where they played at least 1 level
 
-      if (attemptsError) {
-        console.error('Quiz attempts error:', attemptsError);
-        throw attemptsError;
+      if (sessionsError) {
+        console.error('Game sessions error:', sessionsError);
+        // If no game_sessions table exists, show profiles with 0 points
+        const leaderboardData = profiles.map((profile, index) => ({
+          user_id: profile.user_id,
+          full_name: profile.full_name,
+          total_points: 0,
+          total_games: 0,
+          average_score: 0,
+          rank_position: index + 1,
+          avatar_emoji: profile.avatar_options?.emoji,
+          avatar_color: profile.avatar_options?.color_scheme
+        }));
+        setLeaderboard(leaderboardData);
+        if (user) {
+          const userEntry = leaderboardData.find(entry => entry.user_id === user.id);
+          setUserRank(userEntry || null);
+        }
+        setIsLoading(false);
+        return;
       }
 
-      console.log('Quiz attempts:', attempts);
+      console.log('Game sessions:', sessions);
 
-      // Get quizzes for subject filtering
-      const { data: quizzes, error: quizzesError } = await supabase
-        .from('quizzes')
-        .select('id, subject');
-
-      if (quizzesError) {
-        console.error('Quizzes error:', quizzesError);
-      }
-
-      // Create lookup maps
+      // Create lookup map
       const profileMap = new Map(profiles.map(p => [p.user_id, p]));
-      const quizMap = new Map(quizzes?.map(q => [q.id, q]) || []);
-
-      // Filter attempts by subject if needed
-      const validAttempts = (attempts || []).filter(attempt => {
-        const profile = profileMap.get(attempt.user_id);
-        const quiz = quizMap.get(attempt.quiz_id);
-        
-        if (!profile) return false;
-        if (selectedSubject !== 'all' && quiz?.subject !== selectedSubject) return false;
-        
-        return true;
-      });
-
-      console.log('Valid attempts:', validAttempts);
 
       // Calculate user stats for all profiles in the grade
       const userStats = new Map();
@@ -151,20 +147,24 @@ const Leaderboard = () => {
           user_id: profile.user_id,
           full_name: profile.full_name,
           total_points: 0,
-          total_quizzes: 0,
+          total_games: 0,
           scores: [],
           avatar_emoji: profile.avatar_options?.emoji,
           avatar_color: profile.avatar_options?.color_scheme
         });
       });
       
-      // Add attempt data to existing profiles
-      validAttempts.forEach(attempt => {
-        const existing = userStats.get(attempt.user_id);
+      // Add session data to existing profiles
+      (sessions || []).forEach(session => {
+        const profile = profileMap.get(session.user_id);
+        if (!profile) return;
+        if (selectedSubject !== 'all' && session.game_type !== selectedSubject) return;
+        
+        const existing = userStats.get(session.user_id);
         if (existing) {
-          existing.total_points += attempt.score || 0;
-          existing.total_quizzes += 1;
-          existing.scores.push(attempt.score || 0);
+          existing.total_points += session.score || 0;
+          existing.total_games += 1;
+          existing.scores.push(session.score || 0);
         }
       });
 
@@ -176,11 +176,11 @@ const Leaderboard = () => {
           rank_position: 0
         }))
         .sort((a, b) => {
-          // Sort by total points first, then by total quizzes completed
+          // Sort by total points first, then by total games completed
           if (b.total_points !== a.total_points) {
             return b.total_points - a.total_points;
           }
-          return b.total_quizzes - a.total_quizzes;
+          return b.total_games - a.total_games;
         })
         .map((user, index) => ({ ...user, rank_position: index + 1 }));
 
@@ -286,10 +286,10 @@ const Leaderboard = () => {
               <SelectValue placeholder="Subject" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Subjects</SelectItem>
-              <SelectItem value="math">Math</SelectItem>
-              <SelectItem value="science">Science</SelectItem>
-              <SelectItem value="logic">Logic</SelectItem>
+              <SelectItem value="all">All Games</SelectItem>
+              <SelectItem value="pattern-recognition">Pattern Recognition</SelectItem>
+              <SelectItem value="sequencing">Sequencing</SelectItem>
+              <SelectItem value="deductive-reasoning">Deductive Reasoning</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -380,14 +380,18 @@ const Leaderboard = () => {
         >
           <div className="p-6 border-b border-border">
             <h3 className="text-xl font-bold">
-              Grade {selectedGrade} - {selectedSubject === 'all' ? 'Overall' : selectedSubject.charAt(0).toUpperCase() + selectedSubject.slice(1)} Rankings
+              Grade {selectedGrade} - {selectedSubject === 'all' ? 'Overall' : 
+                selectedSubject === 'pattern-recognition' ? 'Pattern Recognition' :
+                selectedSubject === 'sequencing' ? 'Sequencing' :
+                selectedSubject === 'deductive-reasoning' ? 'Deductive Reasoning' :
+                selectedSubject} Rankings
             </h3>
           </div>
           
           {leaderboard.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground">
               <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No rankings available yet. Complete some quizzes to get started!</p>
+              <p>No rankings available yet. Complete some brain training games to get started!</p>
             </div>
           ) : (
             <div className="divide-y divide-border">
@@ -395,7 +399,7 @@ const Leaderboard = () => {
                 const isCurrentUser = entry.user_id === user?.id;
                 return (
                   <motion.div
-                    key={entry.id}
+                    key={entry.user_id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
@@ -423,7 +427,7 @@ const Leaderboard = () => {
                           {isCurrentUser && <span className="ml-2 text-xs text-primary">(You)</span>}
                         </button>
                         <p className="text-sm text-muted-foreground">
-                          {entry.total_quizzes} quiz{entry.total_quizzes !== 1 ? 'es' : ''} completed
+                          {entry.total_games} game{entry.total_games !== 1 ? 's' : ''} played
                         </p>
                       </div>
                     </div>
@@ -456,7 +460,7 @@ const Leaderboard = () => {
           <Trophy className="w-12 h-12 mx-auto mb-4 text-primary" />
           <h3 className="text-lg font-bold mb-2">Keep Learning!</h3>
           <p className="text-muted-foreground">
-            Complete more quizzes to improve your ranking and earn more points!
+            Complete more brain training games to improve your ranking and earn more points!
           </p>
         </motion.div>
       </div>

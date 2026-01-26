@@ -51,14 +51,13 @@ const AvatarSelection = () => {
         .select('avatar_id')
         .eq('user_id', user?.id);
 
-      // Fetch user's total points
-      const { data: attempts } = await supabase
-        .from('quiz_attempts')
+      // Fetch user's total points from game sessions
+      const { data: sessions } = await supabase
+        .from('game_sessions')
         .select('score')
-        .eq('user_id', user?.id)
-        .not('completed_at', 'is', null);
+        .eq('user_id', user?.id);
 
-      const totalPoints = attempts?.reduce((sum, a) => sum + (a.score || 0), 0) || 0;
+      const totalPoints = sessions?.reduce((sum, s) => sum + (s.score || 0), 0) || 0;
 
       setAvatars(avatarData || []);
       setUnlockedAvatars(new Set(unlockedData?.map(u => u.avatar_id) || []));

@@ -17,7 +17,7 @@ const TermsAndConditions = () => {
           <div className="glass-card rounded-2xl p-6">
             <h2 className="text-2xl font-bold mb-4">Welcome to EduQuest Hub</h2>
             <p className="text-muted-foreground">
-              EduQuest Hub is an educational platform designed specifically for students at Alabang Elementary School. 
+              EduQuest Hub is a brain training platform designed specifically for students at Alabang Elementary School. 
               By using this platform, you agree to follow these terms and conditions to ensure a safe and productive 
               learning environment for everyone.
             </p>
@@ -37,15 +37,16 @@ const TermsAndConditions = () => {
             <div className="space-y-4 text-muted-foreground">
               <p>
                 <strong>Purpose:</strong> This platform is designed exclusively for educational purposes to help 
-                Grade 4-6 students learn Math, Science, and Logic through interactive quizzes.
+                Grade 4-6 students develop logical thinking through interactive brain training games including 
+                Pattern Recognition, Sequencing, and Deductive Reasoning.
               </p>
               <p>
-                <strong>Academic Integrity:</strong> Students are expected to complete quizzes honestly and 
-                independently. Cheating or sharing answers undermines the learning process.
+                <strong>Academic Integrity:</strong> Students are expected to complete games honestly and 
+                independently. Using external help undermines the brain training process.
               </p>
               <p>
-                <strong>Learning Goals:</strong> The platform aims to reinforce classroom learning and help 
-                students track their progress in key subject areas.
+                <strong>Learning Goals:</strong> The platform aims to strengthen logical thinking skills and help 
+                students track their cognitive development through engaging gameplay.
               </p>
             </div>
           </div>
@@ -66,7 +67,7 @@ const TermsAndConditions = () => {
               <div className="flex items-start gap-3">
                 <div className="w-2 h-2 rounded-full bg-success mt-2" />
                 <p className="text-muted-foreground">
-                  <strong>Honest Participation:</strong> Complete quizzes using your own knowledge and effort
+                  <strong>Honest Participation:</strong> Complete brain training games using your own thinking and effort
                 </p>
               </div>
               <div className="flex items-start gap-3">
@@ -99,11 +100,11 @@ const TermsAndConditions = () => {
             <div className="space-y-4 text-muted-foreground">
               <p>
                 <strong>Data Collection:</strong> We collect only necessary information including your name, 
-                grade level, and quiz performance to track your educational progress.
+                grade level, and brain training game performance to track your cognitive development.
               </p>
               <p>
                 <strong>Data Use:</strong> Your information is used solely for educational purposes and to 
-                help teachers understand your learning progress.
+                help teachers understand your logical thinking progress.
               </p>
               <p>
                 <strong>Data Security:</strong> All student data is securely stored and protected. Only 
@@ -123,7 +124,7 @@ const TermsAndConditions = () => {
               <div className="space-y-3">
                 <h4 className="font-semibold text-success">✓ Allowed</h4>
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li>• Taking quizzes multiple times to improve</li>
+                  <li>• Playing brain training games multiple times to improve</li>
                   <li>• Asking teachers for help when needed</li>
                   <li>• Using the platform during designated times</li>
                   <li>• Celebrating achievements and progress</li>
@@ -134,8 +135,8 @@ const TermsAndConditions = () => {
                 <h4 className="font-semibold text-destructive">✗ Not Allowed</h4>
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li>• Sharing login credentials with others</li>
-                  <li>• Copying answers from other students</li>
-                  <li>• Using external resources during quizzes</li>
+                  <li>• Getting help from others during brain training</li>
+                  <li>• Using external resources during games</li>
                   <li>• Attempting to access other students' accounts</li>
                   <li>• Misusing the platform for non-educational purposes</li>
                 </ul>

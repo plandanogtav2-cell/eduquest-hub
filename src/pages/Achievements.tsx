@@ -23,15 +23,25 @@ const Achievements = () => {
   const { user } = useAuthStore();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([]);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [userStats, setUserStats] = useState({
     totalPoints: 0,
-    totalQuizzes: 0,
-    mathQuizzes: 0,
-    scienceQuizzes: 0,
-    logicQuizzes: 0,
-    perfectScores: 0
+    totalGames: 0,
+    patternGames: 0,
+    sequencingGames: 0,
+    deductiveGames: 0,
+    completedLevels: 0,
+    easyCompleted: 0,
+    mediumCompleted: 0,
+    hardCompleted: 0,
+    bestStreak: 0
   });
   const [isLoading, setIsLoading] = useState(true);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => {
     if (user) {
@@ -54,30 +64,33 @@ const Achievements = () => {
         .select('achievement_id, earned_at')
         .eq('user_id', user?.id);
 
-      // Fetch user's quiz stats
-      const { data: attempts } = await supabase
-        .from('quiz_attempts')
-        .select('score, quiz_id, quizzes(subject)')
-        .eq('user_id', user?.id)
-        .not('completed_at', 'is', null);
+      // Fetch user's game stats (updated for brain training games)
+      const { data: sessions } = await supabase
+        .from('game_sessions')
+        .select('score, streak, level_reached, game_type, difficulty')
+        .eq('user_id', user?.id);
 
       setAchievements(achievementsData || []);
       setUserAchievements(userAchievementsData || []);
 
-      // Calculate user stats
-      if (attempts) {
+      // Calculate user stats for brain training games
+      if (sessions) {
         const stats = {
-          totalPoints: attempts.reduce((sum, attempt) => sum + (attempt.score || 0), 0),
-          totalQuizzes: attempts.length,
-          mathQuizzes: attempts.filter(a => a.quizzes?.subject === 'math').length,
-          scienceQuizzes: attempts.filter(a => a.quizzes?.subject === 'science').length,
-          logicQuizzes: attempts.filter(a => a.quizzes?.subject === 'logic').length,
-          perfectScores: attempts.filter(a => (a.score || 0) === 100).length
+          totalPoints: sessions.reduce((sum, session) => sum + (session.score || 0), 0),
+          totalGames: sessions.length,
+          patternGames: sessions.filter(s => s.game_type === 'pattern-recognition').length,
+          sequencingGames: sessions.filter(s => s.game_type === 'sequencing').length,
+          deductiveGames: sessions.filter(s => s.game_type === 'deductive-reasoning').length,
+          completedLevels: sessions.filter(s => s.level_reached >= 10).length,
+          easyCompleted: sessions.filter(s => s.difficulty === 'easy' && s.level_reached >= 10).length,
+          mediumCompleted: sessions.filter(s => s.difficulty === 'medium' && s.level_reached >= 10).length,
+          hardCompleted: sessions.filter(s => s.difficulty === 'hard' && s.level_reached >= 10).length,
+          bestStreak: Math.max(...sessions.map(s => s.streak || 0), 0)
         };
         setUserStats(stats);
 
         // Check and award new achievements
-        const newlyAwarded = await checkAndAwardAchievements(stats, userAchievementsData || []);
+        const newlyAwarded = await checkAndAwardAchievements(stats, userAchievementsData || [], sessions);
         
         // If new achievements were awarded, refetch the data to show them immediately
         if (newlyAwarded && newlyAwarded.length > 0) {
@@ -101,7 +114,7 @@ const Achievements = () => {
     }
   };
 
-  const checkAndAwardAchievements = async (stats: any, currentAchievements: UserAchievement[]) => {
+  const checkAndAwardAchievements = async (stats: any, currentAchievements: UserAchievement[], sessions: any[]) => {
     const earnedIds = new Set(currentAchievements.map(ua => ua.achievement_id));
     const newlyAwarded = [];
     
@@ -111,96 +124,82 @@ const Achievements = () => {
       let shouldAward = false;
 
       switch (achievement.name) {
-        // Beginner achievements
-        case 'First Quiz Hero':
-        case 'First Steps':
-          shouldAward = stats.totalQuizzes >= 1;
+        // First level completions (requires 3 levels completed)
+        case 'Shape Detective':
+        case 'Pattern Pioneer':
+          shouldAward = sessions.filter(s => s.game_type === 'pattern-recognition').length >= 3;
           break;
-        case 'Perfect Start':
-        case 'Quick Learner':
-          shouldAward = stats.perfectScores >= 1;
+        case 'Order Wizard':
+        case 'Sequence Starter':
+          shouldAward = sessions.filter(s => s.game_type === 'sequencing').length >= 3;
           break;
-        case 'Quiz Explorer':
-          shouldAward = stats.mathQuizzes >= 1 && stats.scienceQuizzes >= 1 && stats.logicQuizzes >= 1;
-          break;
-          
-        // Subject masters - FIXED: Only award based on actual quiz completion
-        case 'Math Whiz':
-          shouldAward = stats.mathQuizzes >= 5;
-          break;
-        case 'Math Genius':
-          shouldAward = stats.mathQuizzes >= 10;
-          break;
-        case 'Math Ninja':
-          shouldAward = stats.mathQuizzes >= 20 && stats.perfectScores >= 20;
-          break;
-        case 'Science Explorer':
-          shouldAward = stats.scienceQuizzes >= 5;
-          break;
-        case 'Science Wizard':
-          shouldAward = stats.scienceQuizzes >= 10;
-          break;
-        case 'Science Detective':
-          shouldAward = stats.scienceQuizzes >= 15;
-          break;
-        case 'Logic Master':
-          shouldAward = stats.logicQuizzes >= 5;
-          break;
-        case 'Logic Champion':
-          shouldAward = stats.logicQuizzes >= 10;
-          break;
-        case 'Puzzle Master':
-          shouldAward = stats.logicQuizzes >= 15;
+        case 'Mystery Solver':
+        case 'Logic Learner':
+          shouldAward = sessions.filter(s => s.game_type === 'deductive-reasoning').length >= 3;
           break;
           
-        // Milestones
-        case 'Dedicated Student':
-          shouldAward = stats.totalQuizzes >= 20;
+        // Easy difficulty masters (complete difficulty twice)
+        case 'Pattern Ninja':
+        case 'Pattern Easy Master':
+          shouldAward = sessions.filter(s => s.game_type === 'pattern-recognition' && s.difficulty === 'easy' && s.level_reached >= 10).length >= 2;
           break;
-        case 'Quiz Collector':
-          shouldAward = stats.totalQuizzes >= 25;
+        case 'Flow Master':
+        case 'Sequence Easy Master':
+          shouldAward = sessions.filter(s => s.game_type === 'sequencing' && s.difficulty === 'easy' && s.level_reached >= 10).length >= 2;
           break;
-        case 'Knowledge Seeker':
-          shouldAward = stats.totalQuizzes >= 50;
-          break;
-        case 'Learning Legend':
-          shouldAward = stats.totalQuizzes >= 100;
-          break;
-          
-        // Perfect scores
-        case 'Perfectionist':
-          shouldAward = stats.perfectScores >= 10;
-          break;
-        case 'Hot Streak':
-        case 'Super Streak':
-        case 'Mega Streak':
-          // DISABLED: Need proper streak tracking implementation
-          shouldAward = false;
+        case 'Clue Hunter':
+        case 'Logic Easy Master':
+          shouldAward = sessions.filter(s => s.game_type === 'deductive-reasoning' && s.difficulty === 'easy' && s.level_reached >= 10).length >= 2;
           break;
           
-        // Grade-specific - DISABLED: Need proper grade validation
-        case 'Grade 4 Star':
-        case 'Grade 5 Champion':
-        case 'Grade 6 Legend':
-          shouldAward = false; // Disable until proper grade checking is implemented
+        // Medium difficulty masters (complete difficulty twice)
+        case 'Visual Genius':
+        case 'Pattern Medium Master':
+          shouldAward = sessions.filter(s => s.game_type === 'pattern-recognition' && s.difficulty === 'medium' && s.level_reached >= 10).length >= 2;
+          break;
+        case 'Chain Breaker':
+        case 'Sequence Medium Master':
+          shouldAward = sessions.filter(s => s.game_type === 'sequencing' && s.difficulty === 'medium' && s.level_reached >= 10).length >= 2;
+          break;
+        case 'Mind Reader':
+        case 'Logic Medium Master':
+          shouldAward = sessions.filter(s => s.game_type === 'deductive-reasoning' && s.difficulty === 'medium' && s.level_reached >= 10).length >= 2;
           break;
           
-        // Multiplayer features - DISABLED: Not implemented yet
-        case 'Study Buddy':
-        case 'Helper Hero':
-          shouldAward = false; // Disable until study groups are fully implemented
+        // Hard difficulty masters (complete difficulty twice)
+        case 'Pattern Overlord':
+        case 'Pattern Hard Master':
+          shouldAward = sessions.filter(s => s.game_type === 'pattern-recognition' && s.difficulty === 'hard' && s.level_reached >= 10).length >= 2;
+          break;
+        case 'Sequence God':
+        case 'Sequence Hard Master':
+          shouldAward = sessions.filter(s => s.game_type === 'sequencing' && s.difficulty === 'hard' && s.level_reached >= 10).length >= 2;
+          break;
+        case 'Logic Emperor':
+        case 'Logic Hard Master':
+          shouldAward = sessions.filter(s => s.game_type === 'deductive-reasoning' && s.difficulty === 'hard' && s.level_reached >= 10).length >= 2;
           break;
           
-        // Time-based - DISABLED: Need proper time tracking
-        case 'Speed Demon':
-        case 'Quiz Marathon':
-        case 'Early Bird':
-        case 'Night Owl':
-          shouldAward = false; // Disable until time tracking is implemented
+        // Ultimate achievements
+        case 'Triple Threat':
+        case 'Triple Game Master':
+          shouldAward = sessions.some(s => s.game_type === 'pattern-recognition' && s.difficulty === 'easy' && s.level_reached >= 10) &&
+                       sessions.some(s => s.game_type === 'sequencing' && s.difficulty === 'easy' && s.level_reached >= 10) &&
+                       sessions.some(s => s.game_type === 'deductive-reasoning' && s.difficulty === 'easy' && s.level_reached >= 10);
+          break;
+        case 'Mastermind':
+        case 'Perfect Mind':
+          shouldAward = sessions.some(s => s.game_type === 'pattern-recognition' && s.difficulty === 'hard' && s.level_reached >= 10) &&
+                       sessions.some(s => s.game_type === 'sequencing' && s.difficulty === 'hard' && s.level_reached >= 10) &&
+                       sessions.some(s => s.game_type === 'deductive-reasoning' && s.difficulty === 'hard' && s.level_reached >= 10);
+          break;
+        case 'Point Collector':
+        case 'Brain Champion':
+          shouldAward = stats.totalPoints >= 10000;
           break;
           
         default:
-          shouldAward = stats.totalPoints >= achievement.points_required;
+          shouldAward = false;
       }
 
       if (shouldAward) {
@@ -230,7 +229,21 @@ const Achievements = () => {
       brain: Brain,
       target: Target,
       zap: Zap,
-      crown: Crown
+      crown: Crown,
+      search: Target,
+      shuffle: Zap,
+      lightbulb: Star,
+      eye: Target,
+      'arrow-right': Zap,
+      compass: Star,
+      glasses: Target,
+      link: Zap,
+      'crystal-ball': Star,
+      diamond: Trophy,
+      infinity: Medal,
+      triangle: Crown,
+      'brain-circuit': Brain,
+      coins: Trophy
     };
     return icons[iconName] || Award;
   };
@@ -258,43 +271,18 @@ const Achievements = () => {
     if (isEarned) return 1;
     
     switch (achievement.name) {
-      case 'First Steps':
-      case 'First Quiz Hero':
-        return Math.min(userStats.totalQuizzes / 1, 1);
-      case 'Quick Learner':
-      case 'Perfect Start':
-        return Math.min(userStats.perfectScores / 1, 1);
-      case 'Quiz Explorer':
-        const hasAllSubjects = userStats.mathQuizzes >= 1 && userStats.scienceQuizzes >= 1 && userStats.logicQuizzes >= 1;
-        return hasAllSubjects ? 1 : Math.min((userStats.mathQuizzes > 0 ? 1 : 0) + (userStats.scienceQuizzes > 0 ? 1 : 0) + (userStats.logicQuizzes > 0 ? 1 : 0), 3) / 3;
-      case 'Math Whiz':
-        return Math.min(userStats.mathQuizzes / 5, 1);
-      case 'Math Genius':
-        return Math.min(userStats.mathQuizzes / 10, 1);
-      case 'Math Ninja':
-        return Math.min(Math.min(userStats.mathQuizzes / 20, userStats.perfectScores / 20), 1);
-      case 'Science Explorer':
-        return Math.min(userStats.scienceQuizzes / 5, 1);
-      case 'Science Wizard':
-        return Math.min(userStats.scienceQuizzes / 10, 1);
-      case 'Science Detective':
-        return Math.min(userStats.scienceQuizzes / 15, 1);
-      case 'Logic Master':
-        return Math.min(userStats.logicQuizzes / 5, 1);
-      case 'Logic Champion':
-        return Math.min(userStats.logicQuizzes / 10, 1);
-      case 'Puzzle Master':
-        return Math.min(userStats.logicQuizzes / 15, 1);
-      case 'Dedicated Student':
-        return Math.min(userStats.totalQuizzes / 20, 1);
-      case 'Quiz Collector':
-        return Math.min(userStats.totalQuizzes / 25, 1);
-      case 'Knowledge Seeker':
-        return Math.min(userStats.totalQuizzes / 50, 1);
-      case 'Learning Legend':
-        return Math.min(userStats.totalQuizzes / 100, 1);
-      case 'Perfectionist':
-        return Math.min(userStats.perfectScores / 10, 1);
+      case 'Shape Detective':
+      case 'Pattern Pioneer':
+        return Math.min(userStats.patternGames / 3, 1);
+      case 'Order Wizard':
+      case 'Sequence Starter':
+        return Math.min(userStats.sequencingGames / 3, 1);
+      case 'Mystery Solver':
+      case 'Logic Learner':
+        return Math.min(userStats.deductiveGames / 3, 1);
+      case 'Point Collector':
+      case 'Brain Champion':
+        return Math.min(userStats.totalPoints / 10000, 1);
       default:
         return Math.min(userStats.totalPoints / achievement.points_required, 1);
     }
@@ -314,6 +302,26 @@ const Achievements = () => {
 
   return (
     <DashboardLayout>
+      {/* Modern Toast Notification */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2">
+          <div className={`glass-card rounded-xl p-4 shadow-lg border-l-4 ${
+            toast.type === 'success' ? 'border-green-500 bg-green-50/90' :
+            toast.type === 'error' ? 'border-red-500 bg-red-50/90' :
+            'border-blue-500 bg-blue-50/90'
+          }`}>
+            <div className="flex items-center gap-3">
+              <div className={`w-2 h-2 rounded-full ${
+                toast.type === 'success' ? 'bg-green-500' :
+                toast.type === 'error' ? 'bg-red-500' :
+                'bg-blue-500'
+              }`} />
+              <span className="font-medium text-foreground">{toast.message}</span>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="p-4 lg:p-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -322,7 +330,7 @@ const Achievements = () => {
         >
           <h2 className="text-3xl font-bold mb-4">Achievements</h2>
           <p className="text-muted-foreground mb-6">
-            Collect badges by completing quizzes and reaching milestones!
+            Collect badges by completing brain training games and reaching milestones!
           </p>
           
           <div className="glass-card rounded-2xl p-6 mb-8">
@@ -375,13 +383,18 @@ const Achievements = () => {
             
             // Auto-award achievement if progress is 100% but not yet earned
             if (progress >= 1 && !isEarned) {
-              // Trigger achievement check
-              checkAndAwardAchievements(userStats, userAchievements).then(newlyAwarded => {
-                if (newlyAwarded && newlyAwarded.length > 0) {
-                  // Refetch to update display
-                  fetchData();
-                }
-              });
+              // Trigger achievement check with sessions data
+              supabase
+                .from('game_sessions')
+                .select('score, streak, level_reached, game_type, difficulty')
+                .eq('user_id', user?.id)
+                .then(({ data: sessions }) => {
+                  checkAndAwardAchievements(userStats, userAchievements, sessions || []).then(newlyAwarded => {
+                    if (newlyAwarded && newlyAwarded.length > 0) {
+                      fetchData();
+                    }
+                  });
+                });
             }
             
             return (
@@ -424,17 +437,48 @@ const Achievements = () => {
                 
                 {!isEarned && progress >= 1 && (
                   <div className="mt-4">
-                    <button
+                    <div
                       onClick={async () => {
-                        const newlyAwarded = await checkAndAwardAchievements(userStats, userAchievements);
-                        if (newlyAwarded && newlyAwarded.length > 0) {
-                          fetchData();
+                        try {
+                          // Check if already earned first
+                          const { data: existing } = await supabase
+                            .from('user_achievements')
+                            .select('id')
+                            .eq('user_id', user?.id)
+                            .eq('achievement_id', achievement.id)
+                            .single();
+                          
+                          if (existing) {
+                            showToast('Achievement already earned!', 'info');
+                            fetchData();
+                            return;
+                          }
+                          
+                          // Insert new achievement
+                          const { error } = await supabase
+                            .from('user_achievements')
+                            .insert({
+                              user_id: user?.id,
+                              achievement_id: achievement.id
+                            });
+                          
+                          if (error) {
+                            console.error('Error:', error);
+                            fetchData();
+                          } else {
+                            showToast('🎉 Achievement unlocked!', 'success');
+                            fetchData();
+                          }
+                        } catch (err) {
+                          console.error('Catch error:', err);
+                          fetchData(); // Always refresh to show correct state
                         }
                       }}
-                      className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:shadow-lg transition-all"
+                      className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:shadow-lg transition-all cursor-pointer select-none"
+                      style={{ pointerEvents: 'auto', zIndex: 10 }}
                     >
                       🏆 Claim Achievement!
-                    </button>
+                    </div>
                   </div>
                 )}
                 

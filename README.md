@@ -1,15 +1,19 @@
-# EduQuest Hub - Alabang Elementary School
+# EduQuest Hub - Logic Brain Training
 
-An interactive educational platform designed for Grades 4-6 students to learn Math, Science, and Logic through engaging quizzes and achievements.
+A brain training platform designed for students to develop logical thinking through engaging puzzle games.
+
+## Games
+
+- **Pattern Recognition**: Complete visual patterns with shapes, colors, and symbols
+- **Sequencing**: Arrange items in correct logical order
+- **Deductive Reasoning**: Identify and apply simple rules using clues
 
 ## Features
 
-- **Three Subject Areas**: Math, Science, and Logic
-- **Grade-Specific Content**: Tailored for Grades 4, 5, and 6
-- **Interactive Quizzes**: Engaging quiz system with progress tracking
-- **Achievement System**: Students earn rewards for completing challenges
-- **User Authentication**: Secure login/signup system
-- **Modern UI**: Built with React and Tailwind CSS
+- **Progressive Difficulty**: Games adapt to player skill level
+- **Achievement System**: Unlock rewards for completing challenges
+- **Progress Tracking**: Monitor improvement over time
+- **Modern UI**: Engaging game-like interface
 
 ## Technology Stack
 
@@ -58,7 +62,7 @@ An interactive educational platform designed for Grades 4-6 students to learn Ma
 
 ## Project Structure
 
-- `src/pages/` - Main application pages
+- `src/pages/` - Game pages and main application
 - `src/components/ui/` - Reusable UI components
 - `src/stores/` - State management
 - `src/integrations/supabase/` - Database integration
@@ -73,4 +77,4 @@ An interactive educational platform designed for Grades 4-6 students to learn Ma
 
 ---
 
-© 2026 Alabang Elementary School. Educational platform for students.
+© 2026 EduQuest Hub. Brain training platform for logical thinking development.

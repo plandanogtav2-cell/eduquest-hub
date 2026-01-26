@@ -59,10 +59,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { icon: Megaphone, label: 'Announcements', path: '/teacher/announcements' },
     { icon: Settings, label: 'Settings', path: '/settings' }
   ] : [
-    { icon: Home, label: 'Quizzes', path: '/dashboard' },
+    { icon: Home, label: 'Brain Training', path: '/dashboard' },
     { icon: Megaphone, label: 'Announcements', path: '/announcements' },
     { icon: UserIcon, label: 'Profile', path: '/profile' },
-    { icon: GraduationCap, label: 'Syllabus', path: '/syllabus' },
     { icon: TrendingUp, label: 'Progress Tracker', path: '/progress' },
     { icon: Trophy, label: 'Achievements', path: '/achievements' },
     { icon: Users, label: 'Leaderboard', path: '/leaderboard' },

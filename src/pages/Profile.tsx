@@ -54,7 +54,21 @@ const Profile = () => {
       target: Target,
       zap: Zap,
       crown: Crown,
-      award: Award
+      award: Award,
+      search: Target,
+      shuffle: Zap,
+      lightbulb: Star,
+      eye: Target,
+      'arrow-right': Zap,
+      compass: Star,
+      glasses: Target,
+      link: Zap,
+      'crystal-ball': Star,
+      diamond: Trophy,
+      infinity: Medal,
+      triangle: Crown,
+      'brain-circuit': Brain,
+      coins: Trophy
     };
     return icons[iconName] || Star;
   };
@@ -111,6 +125,7 @@ const Profile = () => {
             id,
             name,
             description,
+            icon,
             badge_color
           )
         `)
@@ -122,46 +137,49 @@ const Profile = () => {
           id: ua.achievements.id,
           name: ua.achievements.name,
           description: ua.achievements.description,
+          icon: ua.achievements.icon,
           badge_color: ua.achievements.badge_color,
           earned_at: ua.earned_at
         }));
         setAchievements(formattedAchievements);
       }
 
-      // Fetch quiz stats
-      const { data: attempts } = await supabase
-        .from('quiz_attempts')
-        .select('score, quizzes(subject)')
-        .eq('user_id', user?.id)
-        .not('completed_at', 'is', null);
+      // Fetch brain training game stats
+      const { data: sessions } = await supabase
+        .from('game_sessions')
+        .select('score, level_reached, game_type, difficulty')
+        .eq('user_id', user?.id);
 
-      if (attempts && attempts.length > 0) {
-        const totalPoints = attempts.reduce((sum, a) => sum + (a.score || 0), 0);
-        const avgScore = totalPoints / attempts.length;
+      if (sessions && sessions.length > 0) {
+        const totalPoints = sessions.reduce((sum, s) => sum + (s.score || 0), 0);
+        const completedGames = sessions.filter(s => s.level_reached >= 10).length;
+        const avgScore = sessions.length > 0 ? Math.round(totalPoints / sessions.length) : 0;
 
-        // Calculate best subject
-        const subjectScores: { [key: string]: number[] } = {};
-        attempts.forEach(attempt => {
-          const subject = attempt.quizzes?.subject || 'unknown';
-          if (!subjectScores[subject]) subjectScores[subject] = [];
-          subjectScores[subject].push(attempt.score || 0);
+        // Calculate best game type
+        const gameScores: { [key: string]: number[] } = {};
+        sessions.forEach(session => {
+          const gameType = session.game_type || 'unknown';
+          if (!gameScores[gameType]) gameScores[gameType] = [];
+          gameScores[gameType].push(session.score || 0);
         });
 
-        let bestSubject = 'None';
+        let bestGame = 'None';
         let bestAvg = 0;
-        Object.entries(subjectScores).forEach(([subject, scores]) => {
+        Object.entries(gameScores).forEach(([game, scores]) => {
           const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
           if (avg > bestAvg) {
             bestAvg = avg;
-            bestSubject = subject.charAt(0).toUpperCase() + subject.slice(1);
+            bestGame = game === 'pattern-recognition' ? 'Pattern Recognition' :
+                      game === 'sequencing' ? 'Sequencing' :
+                      game === 'deductive-reasoning' ? 'Deductive Reasoning' : 'Brain Training';
           }
         });
 
         setStats({
-          totalQuizzes: attempts.length,
+          totalQuizzes: sessions.length,
           totalPoints,
-          averageScore: Math.round(avgScore),
-          bestSubject
+          averageScore: avgScore,
+          bestSubject: bestGame
         });
       }
 
@@ -275,7 +293,7 @@ const Profile = () => {
             >
               <Target className="w-8 h-8 mx-auto mb-3 text-blue-500" />
               <div className="text-3xl font-bold text-foreground mb-1">{stats.totalQuizzes}</div>
-              <div className="text-sm text-muted-foreground">Quizzes Completed</div>
+              <div className="text-sm text-muted-foreground">Games Played</div>
             </motion.div>
 
             <motion.div
@@ -285,7 +303,7 @@ const Profile = () => {
               className="glass-card rounded-2xl p-6 text-center"
             >
               <Trophy className="w-8 h-8 mx-auto mb-3 text-green-500" />
-              <div className="text-3xl font-bold text-foreground mb-1">{stats.averageScore}%</div>
+              <div className="text-3xl font-bold text-foreground mb-1">{stats.averageScore}</div>
               <div className="text-sm text-muted-foreground">Average Score</div>
             </motion.div>
 
@@ -297,7 +315,7 @@ const Profile = () => {
             >
               <Sparkles className="w-8 h-8 mx-auto mb-3 text-purple-500" />
               <div className="text-xl font-bold text-foreground mb-1">{stats.bestSubject}</div>
-              <div className="text-sm text-muted-foreground">Best Subject</div>
+              <div className="text-sm text-muted-foreground">Best Game</div>
             </motion.div>
           </div>
 
@@ -314,11 +332,11 @@ const Profile = () => {
                 👋 Hi! I'm {profile?.full_name}, a Grade {profile?.grade} student at Alabang Elementary School.
               </p>
               <p>
-                📚 I've completed {stats.totalQuizzes} quiz{stats.totalQuizzes !== 1 ? 'es' : ''} and earned {stats.totalPoints} points so far!
+                📚 I've completed {stats.totalQuizzes} brain training game{stats.totalQuizzes !== 1 ? 's' : ''} and earned {stats.totalPoints} points so far!
               </p>
               {stats.bestSubject !== 'None' && (
                 <p>
-                  ⭐ My best subject is {stats.bestSubject} with an average score of {stats.averageScore}%.
+                  ⭐ My best game is {stats.bestSubject} with an average score of {stats.averageScore} points.
                 </p>
               )}
               <p>
@@ -339,7 +357,7 @@ const Profile = () => {
               <div className="glass-card rounded-2xl p-12 text-center">
                 <Award className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <p className="text-muted-foreground">No achievements earned yet.</p>
-                <p className="text-sm text-muted-foreground mt-2">Complete quizzes to earn badges!</p>
+                <p className="text-sm text-muted-foreground mt-2">Complete brain training games to earn badges!</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

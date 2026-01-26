@@ -145,40 +145,45 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     if (data.user) {
-      // If teacher, insert admin role
-      if (isTeacher) {
-        await supabase
+      try {
+        // Call our function to create profile and role
+        const { error: profileError } = await supabase.rpc('create_user_profile', {
+          p_user_id: data.user.id,
+          p_full_name: fullName,
+          p_grade: isTeacher ? null : grade,
+          p_is_teacher: isTeacher
+        });
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+        }
+
+        // Fetch the created profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', data.user.id)
+          .single();
+
+        // Fetch role
+        const { data: roleData } = await supabase
           .from('user_roles')
-          .insert({
-            user_id: data.user.id,
-            role: 'admin'
-          });
+          .select('role')
+          .eq('user_id', data.user.id)
+          .single();
+
+        set({
+          user: data.user,
+          session: data.session,
+          profile: profile as Profile | null,
+          role: (roleData?.role as UserRole) || 'student',
+          isLoading: false,
+        });
+      } catch (err) {
+        console.error('Error creating user profile:', err);
+        set({ isLoading: false });
+        return { error: new Error('Failed to create user profile') };
       }
-
-      // Wait a bit for the trigger to create the profile
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Fetch the created profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', data.user.id)
-        .single();
-
-      // Fetch role
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', data.user.id)
-        .single();
-
-      set({
-        user: data.user,
-        session: data.session,
-        profile: profile as Profile | null,
-        role: (roleData?.role as UserRole) || 'student',
-        isLoading: false,
-      });
     }
 
     return { error: null };

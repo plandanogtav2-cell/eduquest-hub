@@ -139,8 +139,8 @@ const Settings = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>Quiz Reminders</Label>
-                    <p className="text-sm text-muted-foreground">Get notified about new quizzes</p>
+                    <Label>Game Reminders</Label>
+                    <p className="text-sm text-muted-foreground">Get notified about new brain training challenges</p>
                   </div>
                   <Switch
                     checked={settings.notifications}
@@ -172,7 +172,7 @@ const Settings = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>Sound Effects</Label>
-                    <p className="text-sm text-muted-foreground">Play sounds during quizzes for correct/incorrect answers</p>
+                    <p className="text-sm text-muted-foreground">Play sounds during brain training games for feedback</p>
                   </div>
                   <Switch
                     checked={settings.soundEffects}
@@ -195,7 +195,7 @@ const Settings = () => {
                 <p className="text-sm text-muted-foreground">
                   {isTeacher 
                     ? 'All student data is securely stored and accessible only to authorized administrators.'
-                    : 'Your quiz results and personal information are securely stored and only accessible by you and your teachers.'}
+                    : 'Your brain training progress and personal information are securely stored and only accessible by you and your teachers.'}
                 </p>
               </div>
               <div className="p-4 bg-muted/50 rounded-lg">

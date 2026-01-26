@@ -1,62 +1,14 @@
 import { motion } from 'framer-motion';
-import { Brain, Puzzle, Target, Trophy, TrendingUp, CheckCircle } from 'lucide-react';
+import { Brain, Puzzle, Target, Trophy, User, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
-import { supabase } from '@/integrations/supabase/client';
-import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { profile, user } = useAuthStore();
-  const [stats, setStats] = useState({
-    gamesPlayed: 0,
-    bestStreak: 0,
-    brainPoints: 0
-  });
-  const [gameCompletions, setGameCompletions] = useState<Record<string, number>>({}); // Track completed difficulties per game
-
-  useEffect(() => {
-    if (user) {
-      fetchGameStats();
-    }
-  }, [user]);
-
-  const fetchGameStats = async () => {
-    if (!user) return;
-    
-    try {
-      const { data: sessions } = await supabase
-        .from('game_sessions')
-        .select('score, streak, level_reached, game_type, difficulty')
-        .eq('user_id', user.id);
-
-      if (sessions && sessions.length > 0) {
-        const gamesPlayed = sessions.length;
-        const brainPoints = sessions.reduce((total, session) => total + (session.score || 0), 0);
-        const bestStreak = Math.max(...sessions.map(session => session.streak || 0));
-        
-        setStats({
-          gamesPlayed,
-          bestStreak,
-          brainPoints
-        });
-        
-        // Count completed difficulties per game (level_reached >= 10)
-        const completions: Record<string, number> = {};
-        sessions.forEach(session => {
-          if (session.level_reached >= 10) {
-            completions[session.game_type] = (completions[session.game_type] || 0) + 1;
-          }
-        });
-        setGameCompletions(completions);
-      }
-    } catch (error) {
-      console.error('Error fetching game stats:', error);
-    }
-  };
+  const { profile } = useAuthStore();
 
   const games = [
     {
@@ -116,7 +68,7 @@ const Dashboard = () => {
                 <Trophy className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.gamesPlayed}</div>
+                <div className="text-2xl font-bold">0</div>
                 <p className="text-xs text-muted-foreground">Start your first game!</p>
               </CardContent>
             </Card>
@@ -133,7 +85,7 @@ const Dashboard = () => {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.bestStreak}</div>
+                <div className="text-2xl font-bold">0</div>
                 <p className="text-xs text-muted-foreground">Consecutive correct answers</p>
               </CardContent>
             </Card>
@@ -150,7 +102,7 @@ const Dashboard = () => {
                 <Brain className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.brainPoints}</div>
+                <div className="text-2xl font-bold">0</div>
                 <p className="text-xs text-muted-foreground">Earn points by playing games</p>
               </CardContent>
             </Card>
@@ -163,28 +115,14 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {games.map((game, index) => {
               const Icon = game.icon;
-              const completedCount = gameCompletions[game.id] || 0;
-              const isFullyCompleted = completedCount >= 3; // All 3 difficulties completed
-              
               return (
                 <motion.div
                   key={game.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 * (index + 1) }}
-                  className="relative"
                 >
-                  {isFullyCompleted && (
-                    <div className="absolute -top-2 -right-2 z-10">
-                      <div className="bg-yellow-500 text-white rounded-full p-2 shadow-lg">
-                        <CheckCircle className="w-5 h-5" />
-                      </div>
-                    </div>
-                  )}
-                  
-                  <Card className={`h-full hover:shadow-lg transition-shadow cursor-pointer group ${
-                    isFullyCompleted ? 'bg-yellow-50 border-yellow-200' : ''
-                  }`}>
+                  <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer group">
                     <CardHeader>
                       <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${game.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                         <Icon className="w-8 h-8 text-white" />
@@ -201,12 +139,12 @@ const Dashboard = () => {
                           <span className="font-medium">{game.difficulty}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Completed:</span>
-                          <span className="font-medium">{completedCount}/3 difficulties</span>
+                          <span className="text-muted-foreground">Levels:</span>
+                          <span className="font-medium">{game.levels}</span>
                         </div>
                         <Button 
                           className="w-full mt-4" 
-                          onClick={() => navigate(`/game/${game.id}/select`)}
+                          onClick={() => navigate(`/game/${game.id}`)}
                         >
                           Start Playing
                         </Button>
