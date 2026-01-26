@@ -17,12 +17,36 @@ const Dashboard = () => {
     brainPoints: 0
   });
   const [gameCompletions, setGameCompletions] = useState<Record<string, number>>({}); // Track completed difficulties per game
+  const [dailyChallengeCompleted, setDailyChallengeCompleted] = useState(false);
 
   useEffect(() => {
     if (user) {
       fetchGameStats();
+      checkDailyChallenge();
     }
   }, [user]);
+
+  const handleDailyChallenge = () => {
+    navigate('/daily-challenge');
+  };
+  const checkDailyChallenge = async () => {
+    if (!user) return;
+    
+    const today = new Date().toDateString();
+    try {
+      const { data } = await supabase
+        .from('game_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('game_type', 'daily-challenge')
+        .gte('created_at', today)
+        .limit(1);
+        
+      setDailyChallengeCompleted(data && data.length > 0);
+    } catch (error) {
+      console.error('Error checking daily challenge:', error);
+    }
+  };
 
   const fetchGameStats = async () => {
     if (!user) return;
@@ -30,7 +54,7 @@ const Dashboard = () => {
     try {
       const { data: sessions } = await supabase
         .from('game_sessions')
-        .select('score, streak, level_reached, game_type, difficulty')
+        .select('score, streak, level_reached, game_type, difficulty, completed_at')
         .eq('user_id', user.id);
 
       if (sessions && sessions.length > 0) {
@@ -44,11 +68,25 @@ const Dashboard = () => {
           brainPoints
         });
         
-        // Count completed difficulties per game (level_reached >= 10)
+        // Count completed difficulties per game (completed_at is not null)
         const completions: Record<string, number> = {};
         sessions.forEach(session => {
-          if (session.level_reached >= 10) {
-            completions[session.game_type] = (completions[session.game_type] || 0) + 1;
+          if (session.completed_at) {
+            // Convert enhanced game types to base game types for counting
+            let gameType = session.game_type;
+            if (gameType.startsWith('enhanced-')) {
+              gameType = gameType.replace('enhanced-', '');
+            }
+            
+            // Skip daily challenge from regular game completions
+            if (gameType === 'daily-challenge') return;
+            
+            const key = `${gameType}-${session.difficulty}`;
+            if (!completions[gameType]) completions[gameType] = 0;
+            if (!completions[key]) {
+              completions[gameType]++;
+              completions[key] = 1;
+            }
           }
         });
         setGameCompletions(completions);
@@ -236,8 +274,17 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="secondary" className="bg-white text-purple-600 hover:bg-purple-50">
-                Start Daily Challenge
+              <Button 
+                variant="secondary" 
+                className={`bg-white hover:bg-purple-50 ${
+                  dailyChallengeCompleted 
+                    ? 'text-green-600 border-green-200' 
+                    : 'text-purple-600'
+                }`}
+                onClick={handleDailyChallenge}
+                disabled={dailyChallengeCompleted}
+              >
+                {dailyChallengeCompleted ? '✅ Completed Today!' : 'Start Daily Challenge'}
               </Button>
             </CardContent>
           </Card>

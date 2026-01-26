@@ -105,84 +105,66 @@ const Leaderboard = () => {
         return;
       }
 
-      // Get completed game sessions instead of quiz attempts
-      const { data: sessions, error: sessionsError } = await supabase
+      // Get user's own game sessions for accurate data
+      const { data: userSessions, error: userSessionsError } = await supabase
         .from('game_sessions')
-        .select('user_id, score, game_type, difficulty, level_reached')
-        .gte('level_reached', 1); // Only count sessions where they played at least 1 level
+        .select('score, game_type, difficulty, level_reached')
+        .eq('user_id', user?.id || '')
+        .gte('level_reached', 1);
 
-      if (sessionsError) {
-        console.error('Game sessions error:', sessionsError);
-        // If no game_sessions table exists, show profiles with 0 points
-        const leaderboardData = profiles.map((profile, index) => ({
-          user_id: profile.user_id,
-          full_name: profile.full_name,
+      // Calculate current user's actual stats
+      let currentUserStats = null;
+      if (user && userSessions && !userSessionsError) {
+        const filteredSessions = userSessions.filter(session => {
+          if (selectedSubject !== 'all') {
+            const gameType = session.game_type.replace('enhanced-', '');
+            return gameType === selectedSubject;
+          }
+          return true;
+        });
+
+        const totalPoints = filteredSessions.reduce((sum, session) => sum + (session.score || 0), 0);
+        const totalGames = filteredSessions.length;
+        const averageScore = totalGames > 0 ? totalPoints / totalGames : 0;
+
+        currentUserStats = {
+          user_id: user.id,
+          full_name: profile?.full_name || 'You',
+          total_points: totalPoints,
+          total_games: totalGames,
+          average_score: averageScore,
+          rank_position: 1, // Will be calculated later
+          avatar_emoji: profile?.avatar_options?.emoji,
+          avatar_color: profile?.avatar_options?.color_scheme
+        };
+      }
+
+      // For other users, show basic profile info with 0 stats (due to RLS)
+      const leaderboardData = profiles.map((profileData, index) => {
+        // If this is the current user, use their actual stats
+        if (profileData.user_id === user?.id && currentUserStats) {
+          return { ...currentUserStats, rank_position: index + 1 };
+        }
+        
+        // For other users, show 0 stats due to RLS restrictions
+        return {
+          user_id: profileData.user_id,
+          full_name: profileData.full_name,
           total_points: 0,
           total_games: 0,
           average_score: 0,
           rank_position: index + 1,
-          avatar_emoji: profile.avatar_options?.emoji,
-          avatar_color: profile.avatar_options?.color_scheme
-        }));
-        setLeaderboard(leaderboardData);
-        if (user) {
-          const userEntry = leaderboardData.find(entry => entry.user_id === user.id);
-          setUserRank(userEntry || null);
+          avatar_emoji: profileData.avatar_options?.emoji,
+          avatar_color: profileData.avatar_options?.color_scheme
+        };
+      })
+      .sort((a, b) => {
+        if (b.total_points !== a.total_points) {
+          return b.total_points - a.total_points;
         }
-        setIsLoading(false);
-        return;
-      }
-
-      console.log('Game sessions:', sessions);
-
-      // Create lookup map
-      const profileMap = new Map(profiles.map(p => [p.user_id, p]));
-
-      // Calculate user stats for all profiles in the grade
-      const userStats = new Map();
-      
-      // Initialize all profiles with zero stats
-      profiles.forEach(profile => {
-        userStats.set(profile.user_id, {
-          user_id: profile.user_id,
-          full_name: profile.full_name,
-          total_points: 0,
-          total_games: 0,
-          scores: [],
-          avatar_emoji: profile.avatar_options?.emoji,
-          avatar_color: profile.avatar_options?.color_scheme
-        });
-      });
-      
-      // Add session data to existing profiles
-      (sessions || []).forEach(session => {
-        const profile = profileMap.get(session.user_id);
-        if (!profile) return;
-        if (selectedSubject !== 'all' && session.game_type !== selectedSubject) return;
-        
-        const existing = userStats.get(session.user_id);
-        if (existing) {
-          existing.total_points += session.score || 0;
-          existing.total_games += 1;
-          existing.scores.push(session.score || 0);
-        }
-      });
-
-      // Create leaderboard
-      const leaderboardData = Array.from(userStats.values())
-        .map(user => ({
-          ...user,
-          average_score: user.scores.length > 0 ? user.scores.reduce((a, b) => a + b, 0) / user.scores.length : 0,
-          rank_position: 0
-        }))
-        .sort((a, b) => {
-          // Sort by total points first, then by total games completed
-          if (b.total_points !== a.total_points) {
-            return b.total_points - a.total_points;
-          }
-          return b.total_games - a.total_games;
-        })
-        .map((user, index) => ({ ...user, rank_position: index + 1 }));
+        return b.total_games - a.total_games;
+      })
+      .map((userData, index) => ({ ...userData, rank_position: index + 1 }));
 
       console.log('Final leaderboard:', leaderboardData);
       setLeaderboard(leaderboardData);

@@ -11,7 +11,10 @@ import Dashboard from "./pages/Dashboard";
 import PatternRecognition from "./pages/PatternRecognition";
 import Sequencing from "./pages/Sequencing";
 import DeductiveReasoning from "./pages/DeductiveReasoning";
-import GameSelection from "./pages/GameSelection";
+import EnhancedPatternRecognition from "./pages/EnhancedPatternRecognition";
+import EnhancedSequencing from "./pages/EnhancedSequencing";
+import EnhancedDeductiveReasoning from "./pages/EnhancedDeductiveReasoning";
+import EnhancedGameSelection from "./pages/EnhancedGameSelection";
 import Syllabus from "./pages/Syllabus";
 import Settings from "./pages/Settings";
 import TermsAndConditions from "./pages/TermsAndConditions";
@@ -30,6 +33,7 @@ import AdminAnnouncements from "./pages/AdminAnnouncements";
 import StudentReport from "./pages/StudentReport";
 import Leaderboard from "./pages/Leaderboard";
 import NotFound from "./pages/NotFound";
+import DailyChallenge from "./pages/DailyChallenge";
 
 const queryClient = new QueryClient();
 
@@ -45,10 +49,13 @@ const AppContent = () => {
       <Route path="/" element={<Auth />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/game/:gameType/select" element={<GameSelection />} />
+      <Route path="/game/:gameType/select" element={<EnhancedGameSelection />} />
       <Route path="/game/pattern-recognition/play" element={<PatternRecognition />} />
       <Route path="/game/sequencing/play" element={<Sequencing />} />
       <Route path="/game/deductive-reasoning/play" element={<DeductiveReasoning />} />
+      <Route path="/game/enhanced-pattern-recognition" element={<EnhancedPatternRecognition />} />
+      <Route path="/game/enhanced-sequencing" element={<EnhancedSequencing />} />
+      <Route path="/game/enhanced-deductive-reasoning" element={<EnhancedDeductiveReasoning />} />
       <Route path="/syllabus" element={<Syllabus />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/terms" element={<TermsAndConditions />} />
@@ -66,6 +73,7 @@ const AppContent = () => {
       <Route path="/teacher/announcements" element={<AdminAnnouncements />} />
       <Route path="/teacher/student/:userId" element={<StudentReport />} />
       <Route path="/leaderboard" element={<Leaderboard />} />
+      <Route path="/daily-challenge" element={<DailyChallenge />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
