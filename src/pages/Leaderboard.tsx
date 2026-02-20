@@ -37,141 +37,52 @@ const Leaderboard = () => {
   useEffect(() => {
     if (selectedGrade) {
       fetchLeaderboard();
+    } else {
+      // If no grade after 3 seconds, stop loading
+      const timeout = setTimeout(() => setIsLoading(false), 3000);
+      return () => clearTimeout(timeout);
     }
   }, [selectedGrade, selectedSubject]);
 
   const fetchLeaderboard = async () => {
-    if (!selectedGrade) return;
+    if (!selectedGrade) {
+      setIsLoading(false);
+      return;
+    }
 
     setIsLoading(true);
     try {
-      // Get all profiles for the selected grade first
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select(`
-          user_id,
-          full_name,
-          grade,
-          selected_avatar_id,
-          avatar_options!profiles_selected_avatar_id_fkey(
-            emoji,
-            color_scheme
-          )
-        `)
-        .eq('grade', selectedGrade);
+      // Use the database function to get leaderboard data
+      const gameType = selectedSubject === 'all' ? null : selectedSubject;
+      
+      const { data, error } = await supabase
+        .rpc('get_leaderboard', {
+          p_grade: selectedGrade,
+          p_game_type: gameType
+        });
 
-      if (profilesError) {
-        console.error('Profiles error:', profilesError);
-        // If we can't fetch other profiles due to RLS, at least show current user
-        const currentUserProfile = profile ? [{
-          user_id: user?.id,
-          full_name: profile.full_name,
-          grade: profile.grade
-        }] : [];
-        
-        if (currentUserProfile.length > 0 && currentUserProfile[0].grade === selectedGrade) {
-          // Show just the current user if they match the selected grade
-          setLeaderboard([{
-            user_id: currentUserProfile[0].user_id,
-            full_name: currentUserProfile[0].full_name,
-            total_points: 0,
-            total_games: 0,
-            average_score: 0,
-            rank_position: 1
-          }]);
-          setUserRank({
-            user_id: currentUserProfile[0].user_id,
-            full_name: currentUserProfile[0].full_name,
-            total_points: 0,
-            total_games: 0,
-            average_score: 0,
-            rank_position: 1
-          });
-        } else {
-          setLeaderboard([]);
-          setUserRank(null);
-        }
-        setIsLoading(false);
-        return;
-      }
-
-      console.log('Profiles for grade', selectedGrade, ':', profiles);
-
-      if (!profiles || profiles.length === 0) {
-        console.log('No profiles found for grade', selectedGrade);
+      if (error) {
+        console.error('Leaderboard error:', error);
         setLeaderboard([]);
         setUserRank(null);
         setIsLoading(false);
         return;
       }
 
-      // Get user's own game sessions for accurate data
-      const { data: userSessions, error: userSessionsError } = await supabase
-        .from('game_sessions')
-        .select('score, game_type, difficulty, level_reached')
-        .eq('user_id', user?.id || '')
-        .gte('level_reached', 1);
+      console.log('Leaderboard data:', data);
 
-      // Calculate current user's actual stats
-      let currentUserStats = null;
-      if (user && userSessions && !userSessionsError) {
-        const filteredSessions = userSessions.filter(session => {
-          if (selectedSubject !== 'all') {
-            const gameType = session.game_type.replace('enhanced-', '');
-            return gameType === selectedSubject;
-          }
-          return true;
-        });
-
-        const totalPoints = filteredSessions.reduce((sum, session) => sum + (session.score || 0), 0);
-        const totalGames = filteredSessions.length;
-        const averageScore = totalGames > 0 ? totalPoints / totalGames : 0;
-
-        currentUserStats = {
-          user_id: user.id,
-          full_name: profile?.full_name || 'You',
-          total_points: totalPoints,
-          total_games: totalGames,
-          average_score: averageScore,
-          rank_position: 1, // Will be calculated later
-          avatar_emoji: profile?.avatar_options?.emoji,
-          avatar_color: profile?.avatar_options?.color_scheme
-        };
+      if (!data || data.length === 0) {
+        setLeaderboard([]);
+        setUserRank(null);
+        setIsLoading(false);
+        return;
       }
 
-      // For other users, show basic profile info with 0 stats (due to RLS)
-      const leaderboardData = profiles.map((profileData, index) => {
-        // If this is the current user, use their actual stats
-        if (profileData.user_id === user?.id && currentUserStats) {
-          return { ...currentUserStats, rank_position: index + 1 };
-        }
-        
-        // For other users, show 0 stats due to RLS restrictions
-        return {
-          user_id: profileData.user_id,
-          full_name: profileData.full_name,
-          total_points: 0,
-          total_games: 0,
-          average_score: 0,
-          rank_position: index + 1,
-          avatar_emoji: profileData.avatar_options?.emoji,
-          avatar_color: profileData.avatar_options?.color_scheme
-        };
-      })
-      .sort((a, b) => {
-        if (b.total_points !== a.total_points) {
-          return b.total_points - a.total_points;
-        }
-        return b.total_games - a.total_games;
-      })
-      .map((userData, index) => ({ ...userData, rank_position: index + 1 }));
-
-      console.log('Final leaderboard:', leaderboardData);
-      setLeaderboard(leaderboardData);
+      setLeaderboard(data);
 
       // Find current user's rank
       if (user) {
-        const userEntry = leaderboardData.find(entry => entry.user_id === user.id);
+        const userEntry = data.find((entry: any) => entry.user_id === user.id);
         setUserRank(userEntry || null);
       }
     } catch (error) {
@@ -295,13 +206,13 @@ const Leaderboard = () => {
                     <div className="flex-1" />
                     <div className="text-right">
                       <p className="text-2xl font-bold text-primary">{userRank.total_points}</p>
-                      <p className="text-sm text-muted-foreground">points</p>
+                      <p className="text-sm text-muted-foreground">total points</p>
                     </div>
                     <div className="text-right">
-                      <p className={`text-lg font-bold ${getPerformanceColor(userRank.average_score)}`}>
-                        {userRank.average_score.toFixed(1)}%
+                      <p className="text-lg font-bold text-blue-600">
+                        {Math.round(userRank.average_score)}
                       </p>
-                      <p className="text-sm text-muted-foreground">avg score</p>
+                      <p className="text-sm text-muted-foreground">avg points</p>
                     </div>
                   </div>
           </motion.div>
@@ -416,14 +327,14 @@ const Leaderboard = () => {
                     
                     <div className="text-right">
                       <p className="text-lg font-bold">{entry.total_points}</p>
-                      <p className="text-xs text-muted-foreground">points</p>
+                      <p className="text-xs text-muted-foreground">total points</p>
                     </div>
                     
                     <div className="text-right">
-                      <p className={`font-bold ${getPerformanceColor(entry.average_score)}`}>
-                        {entry.average_score.toFixed(1)}%
+                      <p className="font-bold text-blue-600">
+                        {Math.round(entry.average_score)}
                       </p>
-                      <p className="text-xs text-muted-foreground">avg score</p>
+                      <p className="text-xs text-muted-foreground">avg points</p>
                     </div>
                   </motion.div>
                 );

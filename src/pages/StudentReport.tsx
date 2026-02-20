@@ -7,17 +7,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
 
-interface QuizAttempt {
+interface GameSession {
   id: string;
   score: number;
-  correct_answers: number;
-  total_questions: number;
-  completed_at: string;
-  quiz_id: string;
-  quizzes: {
-    title: string;
-    subject: string;
-  };
+  level_reached: number;
+  streak: number;
+  created_at: string;
+  game_type: string;
+  difficulty: string;
 }
 
 interface StudentData {
@@ -31,7 +28,7 @@ const StudentReport = () => {
   const { role } = useAuthStore();
   const navigate = useNavigate();
   const [student, setStudent] = useState<StudentData | null>(null);
-  const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
+  const [attempts, setAttempts] = useState<GameSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -48,7 +45,7 @@ const StudentReport = () => {
     try {
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('full_name, grade, points')
+        .select('full_name, grade')
         .eq('user_id', userId)
         .single();
 
@@ -57,16 +54,24 @@ const StudentReport = () => {
         return;
       }
 
-      setStudent(profileData);
+      // Get total points from game sessions
+      const { data: sessions } = await supabase
+        .from('game_sessions')
+        .select('score')
+        .eq('user_id', userId);
+      
+      const totalPoints = sessions?.reduce((sum, s) => sum + (s.score || 0), 0) || 0;
 
-      const { data: attemptsData } = await supabase
-        .from('quiz_attempts')
-        .select('*, quizzes(title, subject)')
+      setStudent({ ...profileData, points: totalPoints });
+
+      // Get all game sessions
+      const { data: gameSessions } = await supabase
+        .from('game_sessions')
+        .select('*')
         .eq('user_id', userId)
-        .not('completed_at', 'is', null)
-        .order('completed_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
-      setAttempts(attemptsData || []);
+      setAttempts(gameSessions || []);
     } catch (error) {
       console.error('Error fetching student data:', error);
     } finally {
@@ -77,22 +82,21 @@ const StudentReport = () => {
   const exportToCSV = () => {
     if (!student || attempts.length === 0) return;
 
-    const headers = ['Date', 'Quiz Title', 'Subject', 'Score', 'Correct Answers', 'Total Questions', 'Percentage'];
-    const rows = attempts.map(attempt => [
-      new Date(attempt.completed_at).toLocaleDateString(),
-      attempt.quizzes.title,
-      attempt.quizzes.subject,
-      attempt.score,
-      attempt.correct_answers,
-      attempt.total_questions,
-      `${Math.round((attempt.correct_answers / attempt.total_questions) * 100)}%`
+    const headers = ['Date', 'Game Type', 'Difficulty', 'Score', 'Level Reached', 'Streak'];
+    const rows = attempts.map(session => [
+      new Date(session.created_at).toLocaleDateString(),
+      session.game_type.replace('enhanced-', '').replace('-', ' '),
+      session.difficulty,
+      session.score,
+      session.level_reached,
+      session.streak
     ]);
 
     const csvContent = [
       `Student Progress Report - ${student.full_name}`,
       `Grade: ${student.grade}`,
       `Total Points: ${student.points}`,
-      `Total Quizzes: ${attempts.length}`,
+      `Total Games: ${attempts.length}`,
       '',
       headers.join(','),
       ...rows.map(row => row.join(','))
@@ -108,30 +112,33 @@ const StudentReport = () => {
   };
 
   const calculateStats = () => {
-    if (attempts.length === 0) return { avgScore: 0, totalQuizzes: 0, bestSubject: 'None' };
+    if (attempts.length === 0) return { avgScore: 0, totalGames: 0, bestGame: 'None' };
 
     const avgScore = Math.round(
-      attempts.reduce((sum, a) => sum + a.score, 0) / attempts.length
+      attempts.reduce((sum, s) => sum + s.score, 0) / attempts.length
     );
 
-    const subjectScores: { [key: string]: number[] } = {};
-    attempts.forEach(attempt => {
-      const subject = attempt.quizzes.subject;
-      if (!subjectScores[subject]) subjectScores[subject] = [];
-      subjectScores[subject].push(attempt.score);
+    const gameScores: { [key: string]: number[] } = {};
+    attempts.forEach(session => {
+      const gameType = session.game_type.replace('enhanced-', '');
+      const gameName = gameType === 'pattern-recognition' ? 'Pattern Recognition' :
+                      gameType === 'sequencing' ? 'Sequencing' :
+                      gameType === 'deductive-reasoning' ? 'Deductive Reasoning' : 'Unknown';
+      if (!gameScores[gameName]) gameScores[gameName] = [];
+      gameScores[gameName].push(session.score);
     });
 
-    let bestSubject = 'None';
+    let bestGame = 'None';
     let bestAvg = 0;
-    Object.entries(subjectScores).forEach(([subject, scores]) => {
+    Object.entries(gameScores).forEach(([game, scores]) => {
       const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
       if (avg > bestAvg) {
         bestAvg = avg;
-        bestSubject = subject.charAt(0).toUpperCase() + subject.slice(1);
+        bestGame = game;
       }
     });
 
-    return { avgScore, totalQuizzes: attempts.length, bestSubject };
+    return { avgScore, totalGames: attempts.length, bestGame };
   };
 
   const stats = calculateStats();
@@ -202,8 +209,8 @@ const StudentReport = () => {
             className="glass-card rounded-2xl p-6"
           >
             <Target className="w-8 h-8 mb-3 text-blue-500" />
-            <div className="text-3xl font-bold mb-1">{stats.totalQuizzes}</div>
-            <div className="text-sm text-muted-foreground">Quizzes Completed</div>
+            <div className="text-3xl font-bold mb-1">{stats.totalGames}</div>
+            <div className="text-sm text-muted-foreground">Games Played</div>
           </motion.div>
 
           <motion.div
@@ -213,8 +220,8 @@ const StudentReport = () => {
             className="glass-card rounded-2xl p-6"
           >
             <TrendingUp className="w-8 h-8 mb-3 text-green-500" />
-            <div className="text-3xl font-bold mb-1">{stats.avgScore}%</div>
-            <div className="text-sm text-muted-foreground">Average Score</div>
+            <div className="text-3xl font-bold mb-1">{stats.avgScore}</div>
+            <div className="text-sm text-muted-foreground">Avg Points</div>
           </motion.div>
 
           <motion.div
@@ -224,8 +231,8 @@ const StudentReport = () => {
             className="glass-card rounded-2xl p-6"
           >
             <Trophy className="w-8 h-8 mb-3 text-purple-500" />
-            <div className="text-xl font-bold mb-1">{stats.bestSubject}</div>
-            <div className="text-sm text-muted-foreground">Best Subject</div>
+            <div className="text-xl font-bold mb-1">{stats.bestGame}</div>
+            <div className="text-sm text-muted-foreground">Best Game</div>
           </motion.div>
         </div>
 
@@ -239,33 +246,34 @@ const StudentReport = () => {
           <h3 className="text-xl font-bold mb-6">Score Progression</h3>
           {attempts.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              No quiz attempts yet
+              No games played yet
             </div>
           ) : (
             <div className="space-y-3">
-              {attempts.slice().reverse().map((attempt, index) => {
-                const percentage = Math.round((attempt.correct_answers / attempt.total_questions) * 100);
-                const barWidth = percentage;
-                const date = new Date(attempt.completed_at);
+              {attempts.slice().reverse().map((session, index) => {
+                const gameType = session.game_type.replace('enhanced-', '').replace('-', ' ');
+                const gameName = gameType.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                const barWidth = Math.min((session.score / 500) * 100, 100);
+                const date = new Date(session.created_at);
                 const dateLabel = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
                 return (
-                  <div key={attempt.id}>
+                  <div key={session.id}>
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{attempt.quizzes.title}</span>
-                        <span className="text-xs text-muted-foreground">({attempt.quizzes.subject})</span>
+                        <span className="text-sm font-medium">{gameName}</span>
+                        <span className="text-xs text-muted-foreground">({session.difficulty})</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">{dateLabel}</span>
-                        <span className="text-sm font-bold">{percentage}%</span>
+                        <span className="text-sm font-bold">{session.score} pts</span>
                       </div>
                     </div>
                     <div className="h-8 bg-muted rounded-lg overflow-hidden">
                       <div
                         className={`h-full transition-all duration-500 ${
-                          percentage >= 80 ? 'bg-gradient-to-r from-green-500 to-green-600' :
-                          percentage >= 60 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
+                          session.score >= 300 ? 'bg-gradient-to-r from-green-500 to-green-600' :
+                          session.score >= 150 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
                           'bg-gradient-to-r from-red-500 to-red-600'
                         }`}
                         style={{ width: `${barWidth}%` }}
@@ -286,11 +294,11 @@ const StudentReport = () => {
           className="glass-card rounded-2xl overflow-hidden"
         >
           <div className="p-6 border-b border-border">
-            <h3 className="text-xl font-bold">Quiz History</h3>
+            <h3 className="text-xl font-bold">Game History</h3>
           </div>
           {attempts.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground">
-              No quiz attempts yet
+              No games played yet
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -298,33 +306,38 @@ const StudentReport = () => {
                 <thead className="bg-muted/30">
                   <tr>
                     <th className="text-left py-3 px-4 font-medium">Date</th>
-                    <th className="text-left py-3 px-4 font-medium">Quiz</th>
-                    <th className="text-left py-3 px-4 font-medium">Subject</th>
+                    <th className="text-left py-3 px-4 font-medium">Game</th>
+                    <th className="text-left py-3 px-4 font-medium">Difficulty</th>
                     <th className="text-left py-3 px-4 font-medium">Score</th>
-                    <th className="text-left py-3 px-4 font-medium">Result</th>
+                    <th className="text-left py-3 px-4 font-medium">Level</th>
+                    <th className="text-left py-3 px-4 font-medium">Streak</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {attempts.map((attempt) => {
-                    const percentage = Math.round((attempt.correct_answers / attempt.total_questions) * 100);
+                  {attempts.map((session) => {
+                    const gameType = session.game_type.replace('enhanced-', '').replace('-', ' ');
+                    const gameName = gameType.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
                     return (
-                      <tr key={attempt.id} className="hover:bg-muted/50">
+                      <tr key={session.id} className="hover:bg-muted/50">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-muted-foreground" />
-                            {new Date(attempt.completed_at).toLocaleDateString()}
+                            {new Date(session.created_at).toLocaleDateString()}
                           </div>
                         </td>
-                        <td className="py-3 px-4 font-medium">{attempt.quizzes.title}</td>
+                        <td className="py-3 px-4 font-medium">{gameName}</td>
                         <td className="py-3 px-4">
                           <span className="px-2 py-1 rounded-full text-xs bg-muted">
-                            {attempt.quizzes.subject}
+                            {session.difficulty}
                           </span>
                         </td>
-                        <td className="py-3 px-4 font-bold">{attempt.score} pts</td>
+                        <td className="py-3 px-4 font-bold">{session.score} pts</td>
                         <td className="py-3 px-4">
-                          <span className={`font-medium ${percentage >= 80 ? 'text-green-600' : percentage >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                            {attempt.correct_answers}/{attempt.total_questions} ({percentage}%)
+                          <span className="font-medium">Level {session.level_reached}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`font-medium ${session.streak >= 5 ? 'text-green-600' : session.streak >= 3 ? 'text-yellow-600' : 'text-gray-600'}`}>
+                            {session.streak} 🔥
                           </span>
                         </td>
                       </tr>

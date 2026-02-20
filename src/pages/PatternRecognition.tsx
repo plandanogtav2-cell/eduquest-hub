@@ -133,18 +133,24 @@ const PatternRecognition = () => {
     }
   };
 
-  const updateGameSession = async () => {
+  const updateGameSession = async (isCompleting = false) => {
     if (!sessionId) return;
     
     try {
+      const updateData: any = {
+        level_reached: currentLevel,
+        score,
+        streak
+      };
+      
+      // Only set completed_at when finishing all 10 levels
+      if (isCompleting) {
+        updateData.completed_at = new Date().toISOString();
+      }
+      
       await supabase
         .from('game_sessions')
-        .update({
-          level_reached: currentLevel,
-          score,
-          streak,
-          completed_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', sessionId);
     } catch (error) {
       console.error('Error updating game session:', error);
@@ -161,8 +167,23 @@ const PatternRecognition = () => {
     
     if (correct) {
       playSound('correct');
-      setScore(score + (currentLevel * 10));
-      setStreak(streak + 1);
+      const newScore = score + (currentLevel * 10);
+      const newStreak = streak + 1;
+      setScore(newScore);
+      setStreak(newStreak);
+      
+      // Update session immediately with new score
+      if (sessionId) {
+        supabase
+          .from('game_sessions')
+          .update({
+            level_reached: currentLevel,
+            score: newScore,
+            streak: newStreak
+          })
+          .eq('id', sessionId)
+          .then(() => console.log('Score updated:', newScore));
+      }
     } else {
       playSound('incorrect');
       setStreak(0);
@@ -173,9 +194,8 @@ const PatternRecognition = () => {
     if (isCorrect) {
       const nextLevel = currentLevel + 1;
       if (nextLevel > 10) {
-        // Completed all levels for this difficulty
         setShowCompletion(true);
-        updateGameSession();
+        updateGameSession(true);
         return;
       }
       setCurrentLevel(nextLevel);
@@ -183,9 +203,6 @@ const PatternRecognition = () => {
     setSelectedAnswer(null);
     setShowResult(false);
     setCurrentPattern(generatePattern(isCorrect ? currentLevel + 1 : currentLevel));
-    
-    // Update database
-    updateGameSession();
   };
 
   const getDifficultyColor = (difficulty: string) => {

@@ -40,11 +40,12 @@ const TeacherDashboard = () => {
     try {
       console.log('Fetching data for admin dashboard...');
       
-      const { count } = await supabase
-        .from('quizzes')
+      // Count total game sessions instead of quizzes
+      const { count: totalGames } = await supabase
+        .from('game_sessions')
         .select('*', { count: 'exact', head: true });
-      console.log('Total quizzes:', count);
-      setTotalQuizzes(count || 0);
+      console.log('Total games:', totalGames);
+      setTotalQuizzes(totalGames || 0);
 
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
@@ -70,29 +71,40 @@ const TeacherDashboard = () => {
       console.log('Fetched profiles:', profiles);
 
       if (profiles) {
+        // Get all user roles
+        const { data: allRoles } = await supabase
+          .from('user_roles')
+          .select('user_id, role');
+        
+        console.log('All roles:', allRoles);
+        
+        // Filter out admin/teacher accounts
+        const adminIds = new Set(allRoles?.filter(r => r.role === 'admin' || r.role === 'super_admin').map(r => r.user_id) || []);
+        const studentProfiles = profiles.filter(p => !adminIds.has(p.user_id));
+        
+        console.log('Student profiles after filtering:', studentProfiles);
+
         const studentsWithProgress = await Promise.all(
-          profiles.map(async (profile) => {
-            // Calculate points from quiz attempts
-            const { data: attempts } = await supabase
-              .from('quiz_attempts')
+          studentProfiles.map(async (profile) => {
+            // Calculate points from game sessions
+            const { data: sessions } = await supabase
+              .from('game_sessions')
               .select('score')
-              .eq('user_id', profile.user_id)
-              .not('completed_at', 'is', null);
+              .eq('user_id', profile.user_id);
             
-            const totalPoints = attempts?.reduce((sum, attempt) => sum + (attempt.score || 0), 0) || 0;
+            const totalPoints = sessions?.reduce((sum, session) => sum + (session.score || 0), 0) || 0;
             
-            const { count } = await supabase
-              .from('quiz_attempts')
+            const { count: gamesPlayed } = await supabase
+              .from('game_sessions')
               .select('*', { count: 'exact', head: true })
-              .eq('user_id', profile.user_id)
-              .not('completed_at', 'is', null);
+              .eq('user_id', profile.user_id);
             
             return {
               user_id: profile.user_id,
               full_name: profile.full_name,
               grade: profile.grade,
               points: totalPoints,
-              quizzes_completed: count || 0,
+              quizzes_completed: gamesPlayed || 0,
               avatar_emoji: profile.avatar_options?.emoji,
               avatar_color: profile.avatar_options?.color_scheme
             };
@@ -149,9 +161,9 @@ const TeacherDashboard = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h2 className="text-3xl font-bold mb-2">Admin Dashboard</h2>
+          <h2 className="text-3xl font-bold mb-2">Teacher Dashboard</h2>
           <p className="text-muted-foreground">
-            Manage quizzes and questions
+            Monitor student progress in brain training games
           </p>
         </motion.div>
 
@@ -174,7 +186,7 @@ const TeacherDashboard = () => {
           >
             <BookOpen className="w-8 h-8 mb-3 text-green-500" />
             <div className="text-3xl font-bold mb-1">{totalQuizzes}</div>
-            <div className="text-sm text-muted-foreground">Total Quizzes</div>
+            <div className="text-sm text-muted-foreground">Total Games</div>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -184,7 +196,7 @@ const TeacherDashboard = () => {
           >
             <BookOpen className="w-8 h-8 mb-3 text-purple-500" />
             <div className="text-3xl font-bold mb-1">{students.reduce((sum, s) => sum + s.quizzes_completed, 0)}</div>
-            <div className="text-sm text-muted-foreground">Total Completions</div>
+            <div className="text-sm text-muted-foreground">Games Played</div>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -277,7 +289,7 @@ const TeacherDashboard = () => {
                   
                   <div className="text-right">
                     <p className="font-bold">{student.quizzes_completed}</p>
-                    <p className="text-xs text-muted-foreground">quizzes</p>
+                    <p className="text-xs text-muted-foreground">games</p>
                   </div>
                 </motion.div>
               ))}

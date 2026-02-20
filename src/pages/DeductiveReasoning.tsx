@@ -3,9 +3,11 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Check, X, Lightbulb, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
 import useSoundEffects from '@/hooks/useSoundEffects';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuthStore } from '@/stores/authStore';
 
 interface Clue {
   text: string;
@@ -24,7 +26,13 @@ interface DeductiveChallenge {
 
 const DeductiveReasoning = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { user } = useAuthStore();
   const { playSound } = useSoundEffects();
+  
+  const difficulty = searchParams.get('difficulty') || 'easy';
+  const grade = parseInt(searchParams.get('grade') || '4');
+  
   const [currentLevel, setCurrentLevel] = useState(1);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -33,22 +41,10 @@ const DeductiveReasoning = () => {
   const [isCorrect, setIsCorrect] = useState(false);
   const [currentChallenge, setCurrentChallenge] = useState<DeductiveChallenge | null>(null);
   const [revealedClues, setRevealedClues] = useState<number>(1);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [showCompletion, setShowCompletion] = useState(false);
 
   const generateChallenge = (level: number): DeductiveChallenge => {
-    let difficulty: 'easy' | 'medium' | 'hard' = 'easy';
-    let clueCount = 2;
-    
-    if (level <= 10) {
-      difficulty = 'easy';
-      clueCount = 2;
-    } else if (level <= 25) {
-      difficulty = 'medium';
-      clueCount = 3;
-    } else {
-      difficulty = 'hard';
-      clueCount = 4;
-    }
-
     const challenges = [
       {
         scenario: "Four friends are sitting in a row at the movies.",
@@ -97,10 +93,86 @@ const DeductiveReasoning = () => {
         question: "What color is the 5th ball?",
         options: ["Red", "Blue", "Green", "Could be green or yellow"],
         correctAnswer: "Could be green or yellow"
+      },
+      {
+        scenario: "Three children are comparing their heights.",
+        clues: [
+          "Tom is taller than Sarah",
+          "Mike is shorter than Sarah",
+          "Tom is not the tallest"
+        ],
+        question: "Who is the shortest?",
+        options: ["Tom", "Sarah", "Mike", "Cannot determine"],
+        correctAnswer: "Mike"
+      },
+      {
+        scenario: "Four books are stacked on a shelf.",
+        clues: [
+          "The red book is above the blue book",
+          "The green book is below the blue book",
+          "The yellow book is at the top",
+          "No book is between yellow and red"
+        ],
+        question: "Which book is at the bottom?",
+        options: ["Red", "Blue", "Green", "Yellow"],
+        correctAnswer: "Green"
+      },
+      {
+        scenario: "Five friends finished a race.",
+        clues: [
+          "Amy finished before Ben but after Cara",
+          "Dan finished last",
+          "Emma finished before Cara",
+          "Ben did not finish last"
+        ],
+        question: "Who finished first?",
+        options: ["Amy", "Ben", "Cara", "Emma"],
+        correctAnswer: "Emma"
+      },
+      {
+        scenario: "Three siblings have different favorite colors.",
+        clues: [
+          "The oldest likes blue",
+          "The youngest does not like red",
+          "The middle child likes green",
+          "Only red, blue, and green are options"
+        ],
+        question: "What color does the youngest like?",
+        options: ["Red", "Blue", "Green", "Cannot determine"],
+        correctAnswer: "Blue"
+      },
+      {
+        scenario: "Four students are in line for lunch.",
+        clues: [
+          "Jake is not first or last",
+          "Lisa is behind Mike",
+          "Nina is first",
+          "Mike is not last"
+        ],
+        question: "Who is last in line?",
+        options: ["Jake", "Lisa", "Mike", "Nina"],
+        correctAnswer: "Lisa"
+      },
+      {
+        scenario: "Three friends each have a different pet.",
+        clues: [
+          "The person with the cat is older than the person with the dog",
+          "Alex is the youngest",
+          "Bailey has the bird",
+          "Casey is older than Bailey"
+        ],
+        question: "Who has the dog?",
+        options: ["Alex", "Bailey", "Casey", "Cannot determine"],
+        correctAnswer: "Alex"
       }
     ];
 
-    const selectedChallenge = challenges[Math.floor(Math.random() * challenges.length)];
+    const patternIndex = (level - 1) % challenges.length;
+    const selectedChallenge = challenges[patternIndex];
+    
+    let clueCount = 2;
+    if (difficulty === 'medium') clueCount = 3;
+    if (difficulty === 'hard') clueCount = 4;
     
     return {
       id: `deductive-${level}`,
@@ -109,7 +181,7 @@ const DeductiveReasoning = () => {
       question: selectedChallenge.question,
       options: selectedChallenge.options,
       correctAnswer: selectedChallenge.correctAnswer,
-      difficulty
+      difficulty: difficulty as 'easy' | 'medium' | 'hard'
     };
   };
 
@@ -117,7 +189,59 @@ const DeductiveReasoning = () => {
     const challenge = generateChallenge(currentLevel);
     setCurrentChallenge(challenge);
     setRevealedClues(1);
-  }, [currentLevel]);
+    // Create game session on first load
+    if (user && !sessionId) {
+      createGameSession();
+    }
+  }, [currentLevel, user]);
+
+  const createGameSession = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('game_sessions')
+        .insert({
+          user_id: user.id,
+          game_type: 'deductive-reasoning',
+          difficulty,
+          grade,
+          level_reached: currentLevel,
+          score: 0,
+          streak: 0
+        })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      setSessionId(data.id);
+    } catch (error) {
+      console.error('Error creating game session:', error);
+    }
+  };
+
+  const updateGameSession = async (isCompleting = false) => {
+    if (!sessionId) return;
+    
+    try {
+      const updateData: any = {
+        level_reached: currentLevel,
+        score,
+        streak
+      };
+      
+      if (isCompleting) {
+        updateData.completed_at = new Date().toISOString();
+      }
+      
+      await supabase
+        .from('game_sessions')
+        .update(updateData)
+        .eq('id', sessionId);
+    } catch (error) {
+      console.error('Error updating game session:', error);
+    }
+  };
 
   const revealNextClue = () => {
     if (!currentChallenge || revealedClues >= currentChallenge.clues.length) return;
@@ -134,10 +258,23 @@ const DeductiveReasoning = () => {
     
     if (correct) {
       playSound('correct');
-      // Bonus points for using fewer clues
       const bonusMultiplier = (currentChallenge!.clues.length - revealedClues + 1);
-      setScore(score + (currentLevel * 20 * bonusMultiplier));
-      setStreak(streak + 1);
+      const newScore = score + (currentLevel * 20 * bonusMultiplier);
+      const newStreak = streak + 1;
+      setScore(newScore);
+      setStreak(newStreak);
+      
+      // Update session immediately
+      if (sessionId) {
+        supabase
+          .from('game_sessions')
+          .update({
+            level_reached: currentLevel,
+            score: newScore,
+            streak: newStreak
+          })
+          .eq('id', sessionId);
+      }
     } else {
       playSound('incorrect');
       setStreak(0);
@@ -146,7 +283,13 @@ const DeductiveReasoning = () => {
 
   const handleNextLevel = () => {
     if (isCorrect) {
-      setCurrentLevel(currentLevel + 1);
+      const nextLevel = currentLevel + 1;
+      if (nextLevel > 10) {
+        setShowCompletion(true);
+        updateGameSession(true);
+        return;
+      }
+      setCurrentLevel(nextLevel);
     }
     setSelectedAnswer(null);
     setShowResult(false);
@@ -182,7 +325,7 @@ const DeductiveReasoning = () => {
           </Button>
           <div className="flex items-center gap-4">
             <div className={`px-3 py-1 rounded-full text-sm font-medium ${getDifficultyColor(currentChallenge.difficulty)}`}>
-              {currentChallenge.difficulty.charAt(0).toUpperCase() + currentChallenge.difficulty.slice(1)}
+              Grade {grade} Level
             </div>
           </div>
         </div>
@@ -347,6 +490,90 @@ const DeductiveReasoning = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Completion Modal */}
+      {showCompletion && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5, y: 50 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white rounded-3xl p-8 max-w-md w-full text-center relative overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-yellow-100 via-pink-100 to-purple-100" />
+            
+            <div className="relative z-10">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: "spring", bounce: 0.6 }}
+                className="text-8xl mb-4"
+              >
+                🧠
+              </motion.div>
+              
+              <motion.h2
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="text-3xl font-bold text-gray-800 mb-2"
+              >
+                Master Detective!
+              </motion.h2>
+              
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="text-lg text-gray-600 mb-6"
+              >
+                You completed all 10 levels of <span className="font-bold text-primary">{difficulty}</span> difficulty!
+              </motion.p>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
+                className="bg-white/80 rounded-2xl p-4 mb-6"
+              >
+                <div className="flex items-center justify-center gap-6">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">{score}</div>
+                    <div className="text-sm text-gray-500">Final Score</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-orange-600">{streak}</div>
+                    <div className="text-sm text-gray-500">Best Streak</div>
+                  </div>
+                </div>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1 }}
+                className="space-y-3"
+              >
+                <Button 
+                  onClick={() => navigate('/dashboard')}
+                  className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-bold py-3 text-lg"
+                >
+                  🏠 Back to Games
+                </Button>
+                
+                {difficulty !== 'hard' && (
+                  <Button 
+                    onClick={() => navigate(`/game/deductive-reasoning/select`)}
+                    variant="outline"
+                    className="w-full border-2 border-primary text-primary hover:bg-primary hover:text-white font-bold py-3"
+                  >
+                    🚀 Try {difficulty === 'easy' ? 'Medium' : 'Hard'} Level
+                  </Button>
+                )}
+              </motion.div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </DashboardLayout>
   );
 };

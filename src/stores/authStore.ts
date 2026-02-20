@@ -126,6 +126,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     const redirectUrl = `${window.location.origin}/`;
 
+    console.log('Signing up with:', { email, fullName, grade, isTeacher });
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -133,11 +135,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         emailRedirectTo: redirectUrl,
         data: {
           full_name: fullName,
-          grade: grade || null,
+          grade: grade,
           is_teacher: isTeacher,
         },
       },
     });
+
+    console.log('Signup response:', { data, error });
 
     if (error) {
       set({ isLoading: false });
@@ -146,6 +150,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     if (data.user) {
       try {
+        console.log('Calling create_user_profile with:', { user_id: data.user.id, fullName, grade, isTeacher });
+        
         // Call our function to create profile and role
         const { error: profileError } = await supabase.rpc('create_user_profile', {
           p_user_id: data.user.id,
@@ -156,6 +162,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         if (profileError) {
           console.error('Profile creation error:', profileError);
+        } else {
+          console.log('Profile created successfully');
         }
 
         // Fetch the created profile

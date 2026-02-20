@@ -14,8 +14,7 @@ interface AvatarOption {
   name: string;
   emoji: string;
   color_scheme: string;
-  points_cost: number;
-  is_default: boolean;
+  points_required: number;
 }
 
 const AvatarSelection = () => {
@@ -29,6 +28,7 @@ const AvatarSelection = () => {
   const [userPoints, setUserPoints] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [rarityFilter, setRarityFilter] = useState<string>('all');
 
   useEffect(() => {
     if (user) {
@@ -42,7 +42,7 @@ const AvatarSelection = () => {
       const { data: avatarData } = await supabase
         .from('avatar_options')
         .select('*')
-        .order('points_cost', { ascending: true })
+        .order('points_required', { ascending: true })
         .order('name', { ascending: true });
 
       // Fetch user's unlocked avatars
@@ -72,38 +72,45 @@ const AvatarSelection = () => {
   };
 
   const handleUnlockAvatar = async (avatar: AvatarOption) => {
-    if (userPoints < avatar.points_cost) {
+    if (userPoints < avatar.points_required) {
       toast({
         variant: 'destructive',
         title: 'Not enough points',
-        description: `You need ${avatar.points_cost - userPoints} more points to unlock this avatar.`
+        description: `You need ${avatar.points_required - userPoints} more points to unlock this avatar.`
       });
       return;
     }
 
     try {
-      const { error } = await supabase
+      console.log('Attempting to unlock avatar:', { user_id: user?.id, avatar_id: avatar.id });
+      
+      const { data, error } = await supabase
         .from('unlocked_avatars')
         .insert({
           user_id: user?.id,
           avatar_id: avatar.id
-        });
+        })
+        .select();
 
-      if (error) throw error;
+      console.log('Unlock result:', { data, error });
+
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
 
       setUnlockedAvatars(prev => new Set([...prev, avatar.id]));
-      setUserPoints(prev => prev - avatar.points_cost);
 
       toast({
         title: 'Avatar unlocked!',
         description: `${avatar.name} is now available!`
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error unlocking avatar:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to unlock avatar. Please try again.'
+        description: error?.message || 'Failed to unlock avatar. Please try again.'
       });
     }
   };
@@ -225,22 +232,73 @@ const AvatarSelection = () => {
 
           {/* Avatar Grid */}
           <div className="lg:col-span-3">
+            {/* Rarity Filter */}
+            <div className="flex gap-2 mb-6 flex-wrap">
+              <Button
+                variant={rarityFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setRarityFilter('all')}
+              >
+                All Avatars
+              </Button>
+              <Button
+                variant={rarityFilter === 'free' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setRarityFilter('free')}
+                className="border-gray-300"
+              >
+                🆓 Free
+              </Button>
+              <Button
+                variant={rarityFilter === 'normal' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setRarityFilter('normal')}
+                className="border-blue-300"
+              >
+                ⭐ Normal
+              </Button>
+              <Button
+                variant={rarityFilter === 'epic' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setRarityFilter('epic')}
+                className="border-purple-400"
+              >
+                💜 Epic
+              </Button>
+              <Button
+                variant={rarityFilter === 'legendary' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setRarityFilter('legendary')}
+                className="border-yellow-500"
+              >
+                👑 Legendary
+              </Button>
+            </div>
+
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {avatars.map((avatar, index) => {
-                const isUnlocked = unlockedAvatars.has(avatar.id);
+              {avatars
+                .filter(avatar => {
+                  if (rarityFilter === 'all') return true;
+                  if (rarityFilter === 'free') return avatar.points_required === 0;
+                  if (rarityFilter === 'normal') return avatar.points_required > 0 && avatar.points_required <= 300;
+                  if (rarityFilter === 'epic') return avatar.points_required > 300 && avatar.points_required <= 1500;
+                  if (rarityFilter === 'legendary') return avatar.points_required > 1500;
+                  return true;
+                })
+                .map((avatar, index) => {
+                const isUnlocked = unlockedAvatars.has(avatar.id) || avatar.points_required === 0;
                 const isSelected = tempSelectedAvatar === avatar.id;
-                const canAfford = userPoints >= avatar.points_cost;
+                const canAfford = userPoints >= avatar.points_required;
                 
                 // Determine rarity based on points cost
                 const getRarity = (cost: number) => {
-                  if (cost === 0) return { name: 'Common', color: 'text-gray-500', bg: 'bg-gray-100' };
-                  if (cost <= 300) return { name: 'Rare', color: 'text-blue-600', bg: 'bg-blue-100' };
-                  if (cost <= 600) return { name: 'Epic', color: 'text-purple-600', bg: 'bg-purple-100' };
-                  if (cost <= 1500) return { name: 'Legendary', color: 'text-orange-600', bg: 'bg-orange-100' };
-                  return { name: 'Mythical', color: 'text-red-600', bg: 'bg-red-100' };
+                  if (cost === 0) return { name: 'Free', color: 'text-gray-600', bg: 'bg-gray-100', border: 'border-gray-300' };
+                  if (cost <= 300) return { name: 'Normal', color: 'text-blue-600', bg: 'bg-blue-100', border: 'border-blue-300' };
+                  if (cost <= 1500) return { name: 'Epic', color: 'text-purple-600', bg: 'bg-purple-100', border: 'border-purple-400' };
+                  return { name: 'Legendary', color: 'text-yellow-600', bg: 'bg-gradient-to-r from-yellow-200 to-orange-200', border: 'border-yellow-500' };
                 };
                 
-                const rarity = getRarity(avatar.points_cost);
+                const rarity = getRarity(avatar.points_required);
 
                 return (
                   <motion.div
@@ -248,9 +306,9 @@ const AvatarSelection = () => {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.05 }}
-                    className={`glass-card rounded-2xl p-4 text-center transition-all cursor-pointer relative ${
-                      isSelected ? 'ring-2 ring-primary' : ''
-                    } ${!isUnlocked ? 'opacity-60' : 'hover:shadow-lg'}`}
+                    className={`glass-card rounded-2xl p-4 text-center transition-all cursor-pointer relative border-2 ${
+                      isSelected ? 'ring-4 ring-primary shadow-xl' : rarity.border
+                    } ${!isUnlocked ? 'opacity-60' : 'hover:shadow-lg hover:scale-105'}`}
                     onClick={() => isUnlocked && setTempSelectedAvatar(avatar.id)}
                   >
                     {isSelected && (
@@ -260,11 +318,9 @@ const AvatarSelection = () => {
                     )}
                     
                     {/* Rarity Badge */}
-                    {avatar.points_cost > 0 && (
-                      <div className={`absolute -top-1 -left-1 px-2 py-1 rounded-full text-xs font-bold ${rarity.bg} ${rarity.color}`}>
-                        {rarity.name}
-                      </div>
-                    )}
+                    <div className={`absolute -top-2 -left-2 px-3 py-1 rounded-full text-xs font-bold shadow-md ${rarity.bg} ${rarity.color} border-2 ${rarity.border}`}>
+                      {rarity.name}
+                    </div>
 
                     <div className={`aspect-square bg-gradient-to-br ${avatar.color_scheme} rounded-xl flex items-center justify-center mb-3 relative`}>
                       {isUnlocked ? (
@@ -289,22 +345,22 @@ const AvatarSelection = () => {
                           handleUnlockAvatar(avatar);
                         }}
                         disabled={!canAfford}
-                        className={`w-full text-xs ${
-                          avatar.points_cost > 1000 ? 'bg-gradient-to-r from-purple-500 to-pink-500' :
-                          avatar.points_cost > 500 ? 'bg-gradient-to-r from-orange-500 to-red-500' :
-                          avatar.points_cost > 100 ? 'bg-gradient-to-r from-blue-500 to-purple-500' : ''
+                        className={`w-full text-xs font-bold ${
+                          avatar.points_required >= 2000 ? 'bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 hover:from-yellow-600 hover:via-orange-600 hover:to-red-600' :
+                          avatar.points_required >= 500 ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600' :
+                          avatar.points_required > 0 ? 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600' : ''
                         }`}
                         variant={canAfford ? 'default' : 'secondary'}
                       >
                         {canAfford ? (
                           <>
                             <Trophy className="w-3 h-3 mr-1" />
-                            {avatar.points_cost} pts
+                            {avatar.points_required} pts
                           </>
                         ) : (
                           <>
                             <Lock className="w-3 h-3 mr-1" />
-                            {avatar.points_cost} pts
+                            {avatar.points_required} pts
                           </>
                         )}
                       </Button>

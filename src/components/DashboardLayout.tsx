@@ -53,9 +53,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const isAdmin = role === 'admin' || role === 'super_admin';
 
   const sidebarItems = isAdmin ? [
-    { icon: Shield, label: 'Admin Dashboard', path: '/teacher' },
-    { icon: BarChart3, label: 'Analytics', path: '/teacher/analytics' },
-    { icon: BookOpen, label: 'Manage Quizzes', path: '/teacher/quizzes' },
+    { icon: Shield, label: 'Teacher Dashboard', path: '/teacher' },
+    { icon: BarChart3, label: 'Student Analytics', path: '/teacher/analytics' },
     { icon: Megaphone, label: 'Announcements', path: '/teacher/announcements' },
     { icon: Settings, label: 'Settings', path: '/settings' }
   ] : [

@@ -46,7 +46,7 @@ const Auth = () => {
   });
 
   useEffect(() => {
-    if (user && role) {
+    if (user && role && !isLoading) {
       // Redirect based on role
       if (role === 'admin' || role === 'super_admin') {
         navigate('/teacher');
@@ -54,7 +54,7 @@ const Auth = () => {
         navigate('/dashboard');
       }
     }
-  }, [user, role, navigate]);
+  }, [user, role, isLoading, navigate]);
 
   const handleLogin = async (data: LoginForm) => {
     const { error } = await signIn(data.email, data.password);
@@ -66,7 +66,15 @@ const Auth = () => {
       });
     } else {
       toast({ title: 'Welcome back!', description: 'Successfully logged in' });
-      // Redirect based on role will happen in useEffect
+      // Wait a bit for role to be loaded, then redirect
+      setTimeout(() => {
+        const currentRole = useAuthStore.getState().role;
+        if (currentRole === 'admin' || currentRole === 'super_admin') {
+          navigate('/teacher');
+        } else {
+          navigate('/dashboard');
+        }
+      }, 100);
     }
   };
 

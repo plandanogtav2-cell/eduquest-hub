@@ -86,22 +86,25 @@ const Profile = () => {
   };
 
   useEffect(() => {
-    if (user && profile) {
+    if (user) {
       fetchProfileData();
+    } else {
+      // If no user after 3 seconds, stop loading
+      const timeout = setTimeout(() => setIsLoading(false), 3000);
+      return () => clearTimeout(timeout);
     }
   }, [user, profile?.selected_avatar_id]);
 
-  // Refresh data when component mounts or when coming back from avatar selection
   useEffect(() => {
     const handleFocus = () => {
-      if (user && profile) {
+      if (user) {
         fetchProfileData();
       }
     };
     
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [user, profile]);
+  }, [user]);
 
   const fetchProfileData = async () => {
     try {
