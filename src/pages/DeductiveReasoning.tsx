@@ -237,7 +237,7 @@ const DeductiveReasoning = () => {
         <div className="grid grid-cols-3 gap-4 mb-8">
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">{currentLevel}</div>
+              <div className="text-2xl font-bold text-primary">{currentLevel}/5</div>
               <div className="text-sm text-muted-foreground">Level</div>
             </CardContent>
           </Card>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Play, Star, Zap, Brain, Clock, Trophy, GraduationCap, CheckCircle } from 'lucide-react';
+import React from 'react';
+import { ArrowLeft, Play, Star, Zap, Brain, Clock, Trophy, GraduationCap, CheckCircle, Sparkles, Flame, Puzzle, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -55,6 +56,8 @@ const EnhancedGameSelection = () => {
     'pattern-recognition': {
       title: 'Pattern Recognition',
       subtitle: 'Enhance visual-spatial intelligence',
+      icon: Puzzle,
+      color: 'from-blue-500 to-purple-600',
       modes: [
         {
           id: 'enhanced',
@@ -70,6 +73,8 @@ const EnhancedGameSelection = () => {
     'sequencing': {
       title: 'Sequencing',
       subtitle: 'Develop logical ordering skills',
+      icon: Target,
+      color: 'from-green-500 to-teal-600',
       modes: [
         {
           id: 'enhanced',
@@ -85,6 +90,8 @@ const EnhancedGameSelection = () => {
     'deductive-reasoning': {
       title: 'Deductive Reasoning',
       subtitle: 'Master logical thinking and problem-solving',
+      icon: Brain,
+      color: 'from-orange-500 to-red-600',
       modes: [
         {
           id: 'enhanced',
@@ -134,66 +141,106 @@ const EnhancedGameSelection = () => {
 
   return (
     <DashboardLayout>
-      <div className="p-4 lg:p-8">
-        <Button variant="ghost" onClick={() => navigate('/dashboard')} className="mb-4">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Dashboard
-        </Button>
-
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">🎮 {currentGame.title}</h1>
-          <p className="text-muted-foreground text-lg">{currentGame.subtitle}</p>
-        </div>
-
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-6">Choose Your Difficulty</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {['easy', 'medium', 'hard'].map((diff) => {
-              const isCompleted = completedDifficulties.has(diff);
-              const isSelected = selectedDifficulty === diff;
-              const diffEmoji = diff === 'easy' ? '🌱' : diff === 'medium' ? '🔥' : '⚡';
-              
-              return (
-                <Card 
-                  key={diff}
-                  className={`cursor-pointer transition-all hover:shadow-lg group ${
-                    isSelected ? 'ring-2 ring-primary shadow-lg' : ''
-                  }`}
-                  onClick={() => setSelectedDifficulty(diff)}
-                >
-                  <CardHeader>
-                    <div className="flex items-center justify-between mb-2">
-                      <CardTitle className="text-xl capitalize flex items-center gap-2">
-                        <span className="text-2xl">{diffEmoji}</span>
-                        {diff}
-                      </CardTitle>
-                      {isCompleted && <CheckCircle className="w-5 h-5 text-green-600" />}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl mb-3">
-                      {diff === 'easy' ? '⭐' : diff === 'medium' ? '⭐⭐' : '⭐⭐⭐'}
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {diff === 'easy' && 'Perfect for beginners'}
-                      {diff === 'medium' && 'Balanced challenge'}
-                      {diff === 'hard' && 'Expert level'}
-                    </p>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="flex justify-center">
-          <Button
-            onClick={() => handlePlayGame(currentGame.modes[0])}
-            className="px-8 h-12 text-lg"
-          >
-            <Play className="w-5 h-5 mr-2" />
-            Start Playing
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+        <div className="p-4 lg:p-8 max-w-5xl mx-auto">
+          <Button variant="ghost" onClick={() => navigate('/dashboard')} className="mb-6 hover:bg-white/50">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
           </Button>
+
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-12"
+          >
+            <div className={`inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br ${currentGame.color} mb-4 shadow-xl`}>
+              {React.createElement(currentGame.icon, { className: 'w-10 h-10 text-white' })}
+            </div>
+            <h1 className="text-5xl font-bold mb-3 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              {currentGame.title}
+            </h1>
+            <p className="text-lg text-gray-600">{currentGame.subtitle}</p>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-12"
+          >
+            <h2 className="text-2xl font-bold mb-6 text-center">Choose Your Difficulty</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {['easy', 'medium', 'hard'].map((diff, index) => {
+                const isCompleted = completedDifficulties.has(diff);
+                const isSelected = selectedDifficulty === diff;
+                const diffConfig = {
+                  easy: { gradient: 'from-green-400 to-emerald-500', icon: 'Sparkles', stars: 1 },
+                  medium: { gradient: 'from-yellow-400 to-orange-500', icon: 'Zap', stars: 2 },
+                  hard: { gradient: 'from-red-400 to-pink-500', icon: 'Flame', stars: 3 }
+                }[diff];
+                
+                return (
+                  <motion.div
+                    key={diff}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 + index * 0.1 }}
+                  >
+                    <Card 
+                      className={`cursor-pointer transition-all hover:shadow-2xl group bg-white/80 backdrop-blur ${
+                        isSelected ? 'ring-4 ring-primary shadow-2xl scale-105' : ''
+                      }`}
+                      onClick={() => setSelectedDifficulty(diff)}
+                    >
+                      <CardHeader>
+                        <div className="flex items-center justify-between mb-4">
+                          <CardTitle className="text-2xl capitalize font-bold">{diff}</CardTitle>
+                          {isCompleted && (
+                            <div className="bg-green-100 rounded-full p-1">
+                              <CheckCircle className="w-5 h-5 text-green-600" />
+                            </div>
+                          )}
+                        </div>
+                        <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${diffConfig.gradient} flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all shadow-lg`}>
+                          {diff === 'easy' && <Sparkles className="w-10 h-10 text-white" />}
+                          {diff === 'medium' && <Zap className="w-10 h-10 text-white" />}
+                          {diff === 'hard' && <Flame className="w-10 h-10 text-white" />}
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex gap-1 mb-4">
+                          {[...Array(diffConfig.stars)].map((_, i) => (
+                            <Star key={i} className="w-6 h-6 fill-yellow-400 text-yellow-400" />
+                          ))}
+                        </div>
+                        <p className="text-sm text-gray-600 font-medium">
+                          {diff === 'easy' && 'Perfect for beginners'}
+                          {diff === 'medium' && 'Balanced challenge'}
+                          {diff === 'hard' && 'Expert level'}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="flex justify-center"
+          >
+            <Button
+              onClick={() => handlePlayGame(currentGame.modes[0])}
+              size="lg"
+              className="bg-gradient-to-r from-primary to-accent text-primary-foreground text-lg px-10 py-6 shadow-xl hover:shadow-glow transition-all"
+            >
+              <Play className="w-5 h-5 mr-2" />
+              Start Playing
+            </Button>
+          </motion.div>
         </div>
       </div>
     </DashboardLayout>
