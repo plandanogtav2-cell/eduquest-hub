@@ -62,7 +62,7 @@ const EnhancedGameSelection = () => {
           description: 'Advanced patterns with animations and complex logic',
           features: ['Multi-attribute patterns', 'Canvas animations', 'Time bonuses', 'Particle effects', 'Grade-adaptive difficulty'],
           icon: <Zap className="w-6 h-6" />,
-          route: '/game/enhanced-pattern-recognition',
+          route: '/game/pattern-recognition/play',
           enhanced: true
         }
       ]
@@ -77,7 +77,7 @@ const EnhancedGameSelection = () => {
           description: 'Advanced sequencing with rich interactions',
           features: ['Drag & drop physics', 'Grade-appropriate content', 'Detailed descriptions', 'Time challenges', 'Category-based learning'],
           icon: <Brain className="w-6 h-6" />,
-          route: '/game/enhanced-sequencing',
+          route: '/game/sequencing/play',
           enhanced: true
         }
       ]
@@ -92,7 +92,7 @@ const EnhancedGameSelection = () => {
           description: 'Complex logic grids with advanced reasoning',
           features: ['Logic grids', 'Multi-step reasoning', 'Hint system', 'Note-taking', 'Complex scoring', 'Grade-level adaptation'],
           icon: <Brain className="w-6 h-6" />,
-          route: '/game/enhanced-deductive-reasoning',
+          route: '/game/deductive-reasoning/play',
           enhanced: true
         }
       ]
@@ -134,171 +134,67 @@ const EnhancedGameSelection = () => {
 
   return (
     <DashboardLayout>
-      <div className="p-4 lg:p-8 max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <Button variant="ghost" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-800">{currentGame.title}</h1>
-            <p className="text-gray-600">{currentGame.subtitle}</p>
-          </div>
-          <div className="w-24" /> {/* Spacer for centering */}
+      <div className="p-4 lg:p-8">
+        <Button variant="ghost" onClick={() => navigate('/dashboard')} className="mb-4">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Dashboard
+        </Button>
+
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-2">🎮 {currentGame.title}</h1>
+          <p className="text-muted-foreground text-lg">{currentGame.subtitle}</p>
         </div>
 
-        {/* Game Settings */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Grade Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="w-5 h-5" />
-                Grade Level
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="col-span-3 text-center p-3 bg-blue-50 rounded-lg border-2 border-blue-200">
-                  <div className="flex items-center justify-center gap-2">
-                    <GraduationCap className="w-5 h-5 text-blue-600" />
-                    <span className="font-medium text-blue-800">Your Grade: {user?.profile?.grade || 4}</span>
-                  </div>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground mt-3">
-                Your games are customized for your grade level
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Difficulty Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Difficulty Level
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {['easy', 'medium', 'hard'].map((difficulty) => {
-                  const isCompleted = completedDifficulties.has(difficulty);
-                  return (
-                    <Button
-                      key={difficulty}
-                      variant={selectedDifficulty === difficulty ? "default" : "outline"}
-                      onClick={() => setSelectedDifficulty(difficulty)}
-                      className={`w-full justify-start h-12 relative ${
-                        selectedDifficulty === difficulty ? getDifficultyColor(difficulty) : ''
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <span className="capitalize font-medium">{difficulty}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm opacity-75">
-                            {difficulty === 'easy' ? '⭐' : difficulty === 'medium' ? '⭐⭐' : '⭐⭐⭐'}
-                          </span>
-                          {isCompleted && (
-                            <CheckCircle className="w-4 h-4 text-green-600" />
-                          )}
-                        </div>
-                      </div>
-                    </Button>
-                  );
-                })}
-              </div>
-              <p className="text-sm text-muted-foreground mt-3">
-                Higher difficulty = more points and challenges
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Game Mode */}
-        <div className="flex justify-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <Card className="border-2 border-primary bg-gradient-to-br from-blue-50 to-purple-50">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-3">
-                    {currentGame.modes[0].icon}
-                    {currentGame.modes[0].name}
-                  </CardTitle>
-                  <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-3 py-1 rounded-full text-xs font-bold">
-                    ENHANCED
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-gray-600">{currentGame.modes[0].description}</p>
-                
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-sm">Features:</h4>
-                  <ul className="space-y-1">
-                    {currentGame.modes[0].features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-center gap-2 text-sm text-gray-600">
-                        <div className="w-1.5 h-1.5 bg-primary rounded-full" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <Button
-                  onClick={() => handlePlayGame(currentGame.modes[0])}
-                  className="w-full mt-6 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
-                  size="lg"
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-6">Choose Your Difficulty</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {['easy', 'medium', 'hard'].map((diff) => {
+              const isCompleted = completedDifficulties.has(diff);
+              const isSelected = selectedDifficulty === diff;
+              const diffEmoji = diff === 'easy' ? '🌱' : diff === 'medium' ? '🔥' : '⚡';
+              
+              return (
+                <Card 
+                  key={diff}
+                  className={`cursor-pointer transition-all hover:shadow-lg group ${
+                    isSelected ? 'ring-2 ring-primary shadow-lg' : ''
+                  }`}
+                  onClick={() => setSelectedDifficulty(diff)}
                 >
-                  <Play className="w-4 h-4 mr-2" />
-                  Play Game
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
+                  <CardHeader>
+                    <div className="flex items-center justify-between mb-2">
+                      <CardTitle className="text-xl capitalize flex items-center gap-2">
+                        <span className="text-2xl">{diffEmoji}</span>
+                        {diff}
+                      </CardTitle>
+                      {isCompleted && <CheckCircle className="w-5 h-5 text-green-600" />}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl mb-3">
+                      {diff === 'easy' ? '⭐' : diff === 'medium' ? '⭐⭐' : '⭐⭐⭐'}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {diff === 'easy' && 'Perfect for beginners'}
+                      {diff === 'medium' && 'Balanced challenge'}
+                      {diff === 'hard' && 'Expert level'}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Game Preview */}
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle>What to Expect</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-              <div className="space-y-2">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-                  <Brain className="w-6 h-6 text-blue-600" />
-                </div>
-                <h3 className="font-semibold">Adaptive Learning</h3>
-                <p className="text-sm text-gray-600">
-                  Content automatically adjusts to your grade level and performance
-                </p>
-              </div>
-              <div className="space-y-2">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                  <Trophy className="w-6 h-6 text-green-600" />
-                </div>
-                <h3 className="font-semibold">Progress Tracking</h3>
-                <p className="text-sm text-gray-600">
-                  Earn points, build streaks, and unlock achievements
-                </p>
-              </div>
-              <div className="space-y-2">
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto">
-                  <Zap className="w-6 h-6 text-purple-600" />
-                </div>
-                <h3 className="font-semibold">Enhanced Experience</h3>
-                <p className="text-sm text-gray-600">
-                  Interactive animations, sound effects, and engaging gameplay
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex justify-center">
+          <Button
+            onClick={() => handlePlayGame(currentGame.modes[0])}
+            className="px-8 h-12 text-lg"
+          >
+            <Play className="w-5 h-5 mr-2" />
+            Start Playing
+          </Button>
+        </div>
       </div>
     </DashboardLayout>
   );

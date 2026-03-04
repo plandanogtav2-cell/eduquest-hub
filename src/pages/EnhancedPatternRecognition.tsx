@@ -38,7 +38,7 @@ const EnhancedPatternRecognition = () => {
   
   const [currentLevel, setCurrentLevel] = useState(1);
   const [currentRound, setCurrentRound] = useState(1);
-  const [maxRounds] = useState(3); // 3 rounds per difficulty
+  const [maxRounds, setMaxRounds] = useState(5); // Default 5 for easy
   const [showCompletion, setShowCompletion] = useState(false);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -409,11 +409,13 @@ const EnhancedPatternRecognition = () => {
   }, [currentPattern]);
 
   useEffect(() => {
+    // Set max rounds based on difficulty
+    setMaxRounds(difficulty === 'easy' ? 5 : 10);
     setCurrentPattern(generateGradePattern(grade, currentRound, difficulty));
     if (user && !sessionId) {
       createGameSession();
     }
-  }, [currentRound, user]);
+  }, [currentRound, user, difficulty]);
 
   // Timer effect
   useEffect(() => {

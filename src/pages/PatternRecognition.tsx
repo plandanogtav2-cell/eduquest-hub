@@ -35,73 +35,54 @@ const PatternRecognition = () => {
   const [currentPattern, setCurrentPattern] = useState<Pattern | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showCompletion, setShowCompletion] = useState(false);
+  const [patterns, setPatterns] = useState<any[]>([]);
 
-  // Predefined patterns for each difficulty (10 levels each)
-  const getPatternData = (difficulty: string, level: number) => {
-    const patterns = {
-      easy: [
-        { sequence: ['🔴', '🔵', '🔴'], answer: '🔵', options: ['🔵', '🔴', '🟡', '🟢'] },
-        { sequence: ['⭐', '❤️', '⭐'], answer: '❤️', options: ['❤️', '⭐', '💎', '🔥'] },
-        { sequence: ['🔴', '🔴', '🔵', '🔵'], answer: '🔴', options: ['🔴', '🔵', '🟡', '🟢'] },
-        { sequence: ['1️⃣', '2️⃣', '1️⃣', '2️⃣'], answer: '1️⃣', options: ['1️⃣', '2️⃣', '3️⃣', '4️⃣'] },
-        { sequence: ['🟡', '🟢', '🟡', '🟢'], answer: '🟡', options: ['🟡', '🟢', '🔴', '🔵'] },
-        { sequence: ['💎', '⚡', '💎'], answer: '⚡', options: ['⚡', '💎', '🌟', '❤️'] },
-        { sequence: ['🔵', '🟡', '🔵', '🟡'], answer: '🔵', options: ['🔵', '🟡', '🔴', '🟢'] },
-        { sequence: ['2️⃣', '3️⃣', '2️⃣'], answer: '3️⃣', options: ['3️⃣', '2️⃣', '1️⃣', '4️⃣'] },
-        { sequence: ['🌟', '🔥', '🌟', '🔥'], answer: '🌟', options: ['🌟', '🔥', '⭐', '💎'] },
-        { sequence: ['🟢', '🔴', '🟢', '🔴'], answer: '🟢', options: ['🟢', '🔴', '🔵', '🟡'] }
-      ],
-      medium: [
-        { sequence: ['🔴', '🔵', '🟡', '🔴', '🔵'], answer: '🟡', options: ['🟡', '🔴', '🔵', '🟢'] },
-        { sequence: ['⭐', '❤️', '💎', '⭐', '❤️'], answer: '💎', options: ['💎', '⭐', '❤️', '🔥'] },
-        { sequence: ['1️⃣', '2️⃣', '3️⃣', '1️⃣', '2️⃣'], answer: '3️⃣', options: ['3️⃣', '1️⃣', '2️⃣', '4️⃣'] },
-        { sequence: ['🔵', '🔵', '🟡', '🔵', '🔵'], answer: '🟡', options: ['🟡', '🔵', '🔴', '🟢'] },
-        { sequence: ['🌟', '⚡', '🔥', '🌟', '⚡'], answer: '🔥', options: ['🔥', '🌟', '⚡', '💎'] },
-        { sequence: ['🟢', '🔴', '🔴', '🟢', '🔴'], answer: '🔴', options: ['🔴', '🟢', '🔵', '🟡'] },
-        { sequence: ['3️⃣', '1️⃣', '2️⃣', '3️⃣', '1️⃣'], answer: '2️⃣', options: ['2️⃣', '3️⃣', '1️⃣', '4️⃣'] },
-        { sequence: ['💎', '💎', '⭐', '💎', '💎'], answer: '⭐', options: ['⭐', '💎', '❤️', '🔥'] },
-        { sequence: ['🔵', '🟡', '🔴', '🔵', '🟡'], answer: '🔴', options: ['🔴', '🔵', '🟡', '🟢'] },
-        { sequence: ['4️⃣', '2️⃣', '3️⃣', '4️⃣', '2️⃣'], answer: '3️⃣', options: ['3️⃣', '4️⃣', '2️⃣', '1️⃣'] }
-      ],
-      hard: [
-        { sequence: ['🔴', '🔵', '🟡', '🟢', '🔴', '🔵'], answer: '🟡', options: ['🟡', '🔴', '🔵', '🟢'] },
-        { sequence: ['⭐', '❤️', '💎', '🔥', '⭐', '❤️'], answer: '💎', options: ['💎', '⭐', '❤️', '🔥'] },
-        { sequence: ['1️⃣', '3️⃣', '2️⃣', '4️⃣', '1️⃣', '3️⃣'], answer: '2️⃣', options: ['2️⃣', '1️⃣', '3️⃣', '4️⃣'] },
-        { sequence: ['🔵', '🔵', '🟡', '🔴', '🔵', '🔵'], answer: '🟡', options: ['🟡', '🔵', '🔴', '🟢'] },
-        { sequence: ['🌟', '⚡', '💎', '🔥', '🌟', '⚡'], answer: '💎', options: ['💎', '🌟', '⚡', '🔥'] },
-        { sequence: ['🟢', '🔴', '🔵', '🟡', '🟢', '🔴'], answer: '🔵', options: ['🔵', '🟢', '🔴', '🟡'] },
-        { sequence: ['2️⃣', '4️⃣', '1️⃣', '3️⃣', '2️⃣', '4️⃣'], answer: '1️⃣', options: ['1️⃣', '2️⃣', '4️⃣', '3️⃣'] },
-        { sequence: ['💎', '🔥', '⭐', '❤️', '💎', '🔥'], answer: '⭐', options: ['⭐', '💎', '🔥', '❤️'] },
-        { sequence: ['🔴', '🟡', '🔵', '🟢', '🔴', '🟡'], answer: '🔵', options: ['🔵', '🔴', '🟡', '🟢'] },
-        { sequence: ['5️⃣', '1️⃣', '3️⃣', '2️⃣', '5️⃣', '1️⃣'], answer: '3️⃣', options: ['3️⃣', '5️⃣', '1️⃣', '2️⃣'] }
-      ]
+  // Fetch patterns from database
+  useEffect(() => {
+    const fetchPatterns = async () => {
+      console.log('Fetching patterns for difficulty:', difficulty);
+      const { data, error } = await supabase
+        .from('pattern_rounds')
+        .select('*')
+        .eq('difficulty', difficulty)
+        .order('level', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching patterns:', error);
+      } else {
+        console.log('Fetched patterns:', data);
+        setPatterns(data || []);
+      }
     };
+    fetchPatterns();
+  }, [difficulty]);
 
-    const difficultyPatterns = patterns[difficulty as keyof typeof patterns] || patterns.easy;
-    const patternIndex = (level - 1) % difficultyPatterns.length;
-    return difficultyPatterns[patternIndex];
-  };
-
-  // Generate pattern from predefined data
-  const generatePattern = (level: number): Pattern => {
-    const patternData = getPatternData(difficulty, level);
+  // Generate pattern from database
+  const generatePattern = (level: number): Pattern | null => {
+    const patternData = patterns.find(p => p.level === level);
+    if (!patternData) return null;
+    
+    console.log('Generating pattern for level', level, ':', patternData);
     
     return {
-      id: `pattern-${difficulty}-${level}`,
-      sequence: patternData.sequence,
-      options: patternData.options,
-      correctAnswer: patternData.answer,
+      id: patternData.id,
+      sequence: Array.isArray(patternData.sequence) ? patternData.sequence : JSON.parse(patternData.sequence),
+      options: Array.isArray(patternData.options) ? patternData.options : JSON.parse(patternData.options),
+      correctAnswer: patternData.correct_answer,
       difficulty: difficulty as 'easy' | 'medium' | 'hard'
     };
   };
 
   useEffect(() => {
-    setCurrentPattern(generatePattern(currentLevel));
+    if (patterns.length > 0) {
+      const pattern = generatePattern(currentLevel);
+      if (pattern) setCurrentPattern(pattern);
+    }
     // Create game session on first load
     if (user && !sessionId) {
       createGameSession();
     }
-  }, [currentLevel, user]);
+  }, [currentLevel, user, patterns]);
 
   const createGameSession = async () => {
     if (!user) return;
@@ -190,10 +171,16 @@ const PatternRecognition = () => {
     }
   };
 
+  const getMaxLevels = (difficulty: string) => {
+    return difficulty === 'easy' ? 5 : 10;
+  };
+
   const handleNextLevel = () => {
     if (isCorrect) {
+      const maxLevels = getMaxLevels(difficulty);
       const nextLevel = currentLevel + 1;
-      if (nextLevel > 10) {
+      console.log('Moving to next level:', nextLevel, 'Max levels:', maxLevels);
+      if (nextLevel > maxLevels) {
         setShowCompletion(true);
         updateGameSession(true);
         return;
@@ -202,7 +189,6 @@ const PatternRecognition = () => {
     }
     setSelectedAnswer(null);
     setShowResult(false);
-    setCurrentPattern(generatePattern(isCorrect ? currentLevel + 1 : currentLevel));
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -396,7 +382,7 @@ const PatternRecognition = () => {
                 transition={{ delay: 0.6 }}
                 className="text-lg text-gray-600 mb-6"
               >
-                You completed all 10 levels of <span className="font-bold text-primary">{difficulty}</span> difficulty!
+                You completed all {getMaxLevels(difficulty)} levels of <span className="font-bold text-primary">{difficulty}</span> difficulty!
               </motion.p>
               
               <motion.div

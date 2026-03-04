@@ -43,157 +43,59 @@ const DeductiveReasoning = () => {
   const [revealedClues, setRevealedClues] = useState<number>(1);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showCompletion, setShowCompletion] = useState(false);
+  const [rounds, setRounds] = useState<any[]>([]);
 
-  const generateChallenge = (level: number): DeductiveChallenge => {
-    const challenges = [
-      {
-        scenario: "Four friends are sitting in a row at the movies.",
-        clues: [
-          "Alice is not sitting next to Bob",
-          "Charlie is sitting between Alice and David", 
-          "Bob is at one end of the row",
-          "David is not at either end"
-        ],
-        question: "Who is sitting next to Bob?",
-        options: ["Alice", "Charlie", "David", "No one"],
-        correctAnswer: "Alice"
-      },
-      {
-        scenario: "Three pets live in different colored houses.",
-        clues: [
-          "The cat lives in the red house",
-          "The dog does not live in the blue house",
-          "The bird lives next to the cat",
-          "There are only red, blue, and green houses"
-        ],
-        question: "What color house does the dog live in?",
-        options: ["Red", "Blue", "Green", "Yellow"],
-        correctAnswer: "Blue"
-      },
-      {
-        scenario: "Five students took a test and got different scores.",
-        clues: [
-          "Emma scored higher than Frank",
-          "Grace scored lower than Emma but higher than Henry",
-          "Ivan scored the highest",
-          "Frank scored higher than Henry"
-        ],
-        question: "Who scored the lowest?",
-        options: ["Emma", "Frank", "Grace", "Henry"],
-        correctAnswer: "Henry"
-      },
-      {
-        scenario: "A mystery box contains different colored balls.",
-        clues: [
-          "There are exactly 5 balls in the box",
-          "2 balls are red, 2 are blue",
-          "The remaining ball is either green or yellow",
-          "No two balls of the same color touch each other"
-        ],
-        question: "What color is the 5th ball?",
-        options: ["Red", "Blue", "Green", "Could be green or yellow"],
-        correctAnswer: "Could be green or yellow"
-      },
-      {
-        scenario: "Three children are comparing their heights.",
-        clues: [
-          "Tom is taller than Sarah",
-          "Mike is shorter than Sarah",
-          "Tom is not the tallest"
-        ],
-        question: "Who is the shortest?",
-        options: ["Tom", "Sarah", "Mike", "Cannot determine"],
-        correctAnswer: "Mike"
-      },
-      {
-        scenario: "Four books are stacked on a shelf.",
-        clues: [
-          "The red book is above the blue book",
-          "The green book is below the blue book",
-          "The yellow book is at the top",
-          "No book is between yellow and red"
-        ],
-        question: "Which book is at the bottom?",
-        options: ["Red", "Blue", "Green", "Yellow"],
-        correctAnswer: "Green"
-      },
-      {
-        scenario: "Five friends finished a race.",
-        clues: [
-          "Amy finished before Ben but after Cara",
-          "Dan finished last",
-          "Emma finished before Cara",
-          "Ben did not finish last"
-        ],
-        question: "Who finished first?",
-        options: ["Amy", "Ben", "Cara", "Emma"],
-        correctAnswer: "Emma"
-      },
-      {
-        scenario: "Three siblings have different favorite colors.",
-        clues: [
-          "The oldest likes blue",
-          "The youngest does not like red",
-          "The middle child likes green",
-          "Only red, blue, and green are options"
-        ],
-        question: "What color does the youngest like?",
-        options: ["Red", "Blue", "Green", "Cannot determine"],
-        correctAnswer: "Blue"
-      },
-      {
-        scenario: "Four students are in line for lunch.",
-        clues: [
-          "Jake is not first or last",
-          "Lisa is behind Mike",
-          "Nina is first",
-          "Mike is not last"
-        ],
-        question: "Who is last in line?",
-        options: ["Jake", "Lisa", "Mike", "Nina"],
-        correctAnswer: "Lisa"
-      },
-      {
-        scenario: "Three friends each have a different pet.",
-        clues: [
-          "The person with the cat is older than the person with the dog",
-          "Alex is the youngest",
-          "Bailey has the bird",
-          "Casey is older than Bailey"
-        ],
-        question: "Who has the dog?",
-        options: ["Alex", "Bailey", "Casey", "Cannot determine"],
-        correctAnswer: "Alex"
+  // Fetch rounds from database
+  useEffect(() => {
+    const fetchRounds = async () => {
+      console.log('Fetching deductive reasoning rounds for difficulty:', difficulty);
+      const { data, error } = await supabase
+        .from('deductive_reasoning_rounds')
+        .select('*')
+        .eq('difficulty', difficulty)
+        .order('level', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching rounds:', error);
+      } else {
+        console.log('Fetched rounds:', data);
+        setRounds(data || []);
       }
-    ];
+    };
+    fetchRounds();
+  }, [difficulty]);
 
-    const patternIndex = (level - 1) % challenges.length;
-    const selectedChallenge = challenges[patternIndex];
-    
-    let clueCount = 2;
-    if (difficulty === 'medium') clueCount = 3;
-    if (difficulty === 'hard') clueCount = 4;
-    
+  const generateChallenge = (level: number): DeductiveChallenge | null => {
+    const roundData = rounds.find(r => r.level === level);
+    if (!roundData) return null;
+
+    const clues: Clue[] = (Array.isArray(roundData.clues) ? roundData.clues : JSON.parse(roundData.clues))
+      .map((text: string) => ({ text, revealed: false }));
+
     return {
-      id: `deductive-${level}`,
-      scenario: selectedChallenge.scenario,
-      clues: selectedChallenge.clues.slice(0, clueCount).map(text => ({ text, revealed: false })),
-      question: selectedChallenge.question,
-      options: selectedChallenge.options,
-      correctAnswer: selectedChallenge.correctAnswer,
+      id: roundData.id,
+      scenario: "Use the clues below to solve the mystery",
+      clues,
+      question: roundData.question,
+      options: Array.isArray(roundData.options) ? roundData.options : JSON.parse(roundData.options),
+      correctAnswer: roundData.correct_answer,
       difficulty: difficulty as 'easy' | 'medium' | 'hard'
     };
   };
 
   useEffect(() => {
-    const challenge = generateChallenge(currentLevel);
-    setCurrentChallenge(challenge);
-    setRevealedClues(1);
+    if (rounds.length > 0) {
+      const challenge = generateChallenge(currentLevel);
+      if (challenge) {
+        setCurrentChallenge(challenge);
+        setRevealedClues(1);
+      }
+    }
     // Create game session on first load
     if (user && !sessionId) {
       createGameSession();
     }
-  }, [currentLevel, user]);
+  }, [currentLevel, user, rounds]);
 
   const createGameSession = async () => {
     if (!user) return;
@@ -283,8 +185,9 @@ const DeductiveReasoning = () => {
 
   const handleNextLevel = () => {
     if (isCorrect) {
+      const maxLevels = 5; // 5 rounds for all difficulties
       const nextLevel = currentLevel + 1;
-      if (nextLevel > 10) {
+      if (nextLevel > maxLevels) {
         setShowCompletion(true);
         updateGameSession(true);
         return;
@@ -526,7 +429,7 @@ const DeductiveReasoning = () => {
                 transition={{ delay: 0.6 }}
                 className="text-lg text-gray-600 mb-6"
               >
-                You completed all 10 levels of <span className="font-bold text-primary">{difficulty}</span> difficulty!
+                You completed all 5 levels of <span className="font-bold text-primary">{difficulty}</span> difficulty!
               </motion.p>
               
               <motion.div

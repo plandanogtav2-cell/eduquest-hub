@@ -155,7 +155,7 @@ const Profile = () => {
 
       if (sessions && sessions.length > 0) {
         const totalPoints = sessions.reduce((sum, s) => sum + (s.score || 0), 0);
-        const completedGames = sessions.filter(s => s.level_reached >= 10).length;
+        const completedGames = sessions.filter(s => s.level_reached >= 5).length;
         const avgScore = sessions.length > 0 ? Math.round(totalPoints / sessions.length) : 0;
 
         // Calculate best game type
@@ -174,7 +174,10 @@ const Profile = () => {
             bestAvg = avg;
             bestGame = game === 'pattern-recognition' ? 'Pattern Recognition' :
                       game === 'sequencing' ? 'Sequencing' :
-                      game === 'deductive-reasoning' ? 'Deductive Reasoning' : 'Brain Training';
+                      game === 'deductive-reasoning' ? 'Deductive Reasoning' : 
+                      game.includes('pattern') ? 'Pattern Recognition' :
+                      game.includes('sequencing') ? 'Sequencing' :
+                      game.includes('deductive') ? 'Deductive Reasoning' : 'Brain Training';
           }
         });
 

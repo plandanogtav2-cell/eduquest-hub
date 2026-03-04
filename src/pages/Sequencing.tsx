@@ -41,95 +41,64 @@ const Sequencing = () => {
   const [currentChallenge, setCurrentChallenge] = useState<SequenceChallenge | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showCompletion, setShowCompletion] = useState(false);
+  const [rounds, setRounds] = useState<any[]>([]);
 
-  const generateChallenge = (level: number): SequenceChallenge => {
-    const challenges = [
-      // Size sequences
-      {
-        instruction: "Arrange from smallest to largest",
-        items: ['🐭', '🐱', '🐕', '🐘', '🦣']
-      },
-      // Time sequences
-      {
-        instruction: "Arrange in chronological order",
-        items: ['🌅', '☀️', '🌇', '🌙', '⭐']
-      },
-      // Growth sequences
-      {
-        instruction: "Arrange from seed to full grown",
-        items: ['🌱', '🌿', '🌳', '🍎', '🍂']
-      },
-      // Number sequences
-      {
-        instruction: "Arrange in ascending order",
-        items: ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣']
-      },
-      // Life cycle
-      {
-        instruction: "Arrange in life cycle order",
-        items: ['🥚', '🐣', '🐤', '🐓', '🍳']
-      },
-      // Temperature
-      {
-        instruction: "Arrange from coldest to hottest",
-        items: ['❄️', '🌨️', '☁️', '☀️', '🔥']
-      },
-      // Speed
-      {
-        instruction: "Arrange from slowest to fastest",
-        items: ['🐌', '🚶', '🚴', '🚗', '✈️']
-      },
-      // Brightness
-      {
-        instruction: "Arrange from dimmest to brightest",
-        items: ['🌑', '🌘', '🌗', '🌕', '☀️']
-      },
-      // Age
-      {
-        instruction: "Arrange from youngest to oldest",
-        items: ['👶', '🧒', '👦', '👨', '👴']
-      },
-      // Height
-      {
-        instruction: "Arrange from shortest to tallest",
-        items: ['🌱', '🌿', '🌳', '🏢', '🗼']
+  // Fetch rounds from database
+  useEffect(() => {
+    const fetchRounds = async () => {
+      console.log('Fetching sequencing rounds for difficulty:', difficulty);
+      const { data, error } = await supabase
+        .from('sequencing_rounds')
+        .select('*')
+        .eq('difficulty', difficulty)
+        .order('level', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching rounds:', error);
+      } else {
+        console.log('Fetched rounds:', data);
+        setRounds(data || []);
       }
-    ];
+    };
+    fetchRounds();
+  }, [difficulty]);
 
-    const patternIndex = (level - 1) % challenges.length;
-    const selectedChallenge = challenges[patternIndex];
-    
-    let itemCount = 3;
-    if (difficulty === 'medium') itemCount = 4;
-    if (difficulty === 'hard') itemCount = 5;
-    
-    const items: SequenceItem[] = selectedChallenge.items.slice(0, itemCount).map((content, index) => ({
-      id: `item-${index}`,
-      content,
-      correctOrder: index
-    }));
+  const generateChallenge = (level: number): SequenceChallenge | null => {
+    const roundData = rounds.find(r => r.level === level);
+    if (!roundData) return null;
+
+    const items: SequenceItem[] = (Array.isArray(roundData.items) ? roundData.items : JSON.parse(roundData.items))
+      .map((content: string, index: number) => ({
+        id: `item-${index}`,
+        content,
+        correctOrder: index
+      }));
 
     // Shuffle items for user to arrange
     const shuffledItems = [...items].sort(() => Math.random() - 0.5);
 
     return {
-      id: `sequence-${level}`,
+      id: roundData.id,
       items: shuffledItems,
-      instruction: selectedChallenge.instruction,
+      instruction: "Arrange in the correct order",
       difficulty: difficulty as 'easy' | 'medium' | 'hard'
     };
   };
 
   useEffect(() => {
-    const challenge = generateChallenge(currentLevel);
-    setCurrentChallenge(challenge);
-    setAvailableItems([...challenge.items]);
-    setUserSequence([]);
+    if (rounds.length > 0) {
+      const challenge = generateChallenge(currentLevel);
+      if (challenge) {
+        setCurrentChallenge(challenge);
+        setAvailableItems([...challenge.items]);
+        setUserSequence([]);
+      }
+    }
     // Create game session on first load
     if (user && !sessionId) {
       createGameSession();
     }
-  }, [currentLevel, user]);
+  }, [currentLevel, user, rounds]);
 
   const createGameSession = async () => {
     if (!user) return;
@@ -232,8 +201,9 @@ const Sequencing = () => {
 
   const handleNextLevel = () => {
     if (isCorrect) {
+      const maxLevels = 5; // 5 rounds for all difficulties
       const nextLevel = currentLevel + 1;
-      if (nextLevel > 10) {
+      if (nextLevel > maxLevels) {
         setShowCompletion(true);
         updateGameSession(true);
         return;
@@ -310,17 +280,26 @@ const Sequencing = () => {
             <div className="mb-8">
               <h3 className="text-lg font-semibold mb-4">Your Sequence:</h3>
               <div className="min-h-20 bg-blue-50 border-2 border-blue-200 border-dashed rounded-xl p-4 flex items-center gap-4">
-                {userSequence.map((item, index) => (
-                  <motion.button
-                    key={item.id}
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    onClick={() => handleItemClick(item)}
-                    className="w-16 h-16 bg-white rounded-xl border-2 border-blue-300 text-3xl hover:scale-105 transition-transform"
-                  >
-                    {item.content}
-                  </motion.button>
-                ))}
+                {userSequence.map((item, index) => {
+                  const [emoji, ...textParts] = item.content.split(' ');
+                  const text = textParts.join(' ');
+                  return (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="flex flex-col items-center gap-1"
+                    >
+                      <button
+                        onClick={() => handleItemClick(item)}
+                        className="w-16 h-16 bg-white rounded-xl border-2 border-blue-300 text-3xl hover:scale-105 transition-transform flex items-center justify-center"
+                      >
+                        {emoji}
+                      </button>
+                      <span className="text-xs text-gray-600 text-center max-w-[64px]">{text}</span>
+                    </motion.div>
+                  );
+                })}
                 {userSequence.length === 0 && (
                   <div className="text-muted-foreground text-center w-full">
                     Click items below to arrange them in order
@@ -333,17 +312,26 @@ const Sequencing = () => {
             <div className="mb-8">
               <h3 className="text-lg font-semibold mb-4">Available Items:</h3>
               <div className="flex flex-wrap gap-4 justify-center">
-                {availableItems.map((item) => (
-                  <motion.button
-                    key={item.id}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleItemClick(item)}
-                    className="w-16 h-16 bg-gray-100 rounded-xl border-2 border-gray-300 text-3xl hover:border-primary transition-colors"
-                  >
-                    {item.content}
-                  </motion.button>
-                ))}
+                {availableItems.map((item) => {
+                  const [emoji, ...textParts] = item.content.split(' ');
+                  const text = textParts.join(' ');
+                  return (
+                    <motion.div
+                      key={item.id}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="flex flex-col items-center gap-1"
+                    >
+                      <button
+                        onClick={() => handleItemClick(item)}
+                        className="w-16 h-16 bg-gray-100 rounded-xl border-2 border-gray-300 text-3xl hover:border-primary transition-colors flex items-center justify-center"
+                      >
+                        {emoji}
+                      </button>
+                      <span className="text-xs text-gray-600 text-center max-w-[64px]">{text}</span>
+                    </motion.div>
+                  );
+                })}
               </div>
             </div>
 
@@ -428,7 +416,7 @@ const Sequencing = () => {
                 transition={{ delay: 0.6 }}
                 className="text-lg text-gray-600 mb-6"
               >
-                You completed all 10 levels of <span className="font-bold text-primary">{difficulty}</span> difficulty!
+                You completed all 5 levels of <span className="font-bold text-primary">{difficulty}</span> difficulty!
               </motion.p>
               
               <motion.div
